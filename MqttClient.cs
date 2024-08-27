@@ -4,24 +4,71 @@ using MQTTnet.Formatter;
 using MQTTnet;
 using MQTTnet.Client;
 using System.Text;
+
 namespace Frigate_Helper;
 
 public class MqttClient
 {
     MQTTnet.Client.IMqttClient? mqttClient;
-    public void Connect()
+    MqttClientOptions? mqttClientOptions;
+    public MqttClientConnectResult Connect()
+    {
+        return ConnectAsync().Result;
+    }
+
+    public async Task<MqttClientConnectResult> ConnectAsync()
     {
         var mqttFactory = new MqttFactory();
 
-        mqttClient = mqttFactory.CreateMqttClient();
-        var mqttClientOptions = new MqttClientOptionsBuilder().WithTcpServer("home-assistant.home").WithCredentials(new MqttClientCredentials("mqtt",Encoding.ASCII.GetBytes("mqtt"))).Build();
-        //await mqttClient.ConnectAsync(mqttClientOptions, CancellationToken.None);
+        if(mqttClient!=null)throw new Exception("Connected");
 
-        var response = mqttClient?.ConnectAsync(mqttClientOptions, CancellationToken.None);
+        mqttClient = mqttFactory.CreateMqttClient();
+
+
+        mqttClient.ApplicationMessageReceivedAsync += e =>
+            {
+                Console.WriteLine("Received application message.");
+                //e.DumpToConsole();
+                
+                var message = new Event(e.ApplicationMessage.ConvertPayloadToString());
+                Console.WriteLine(message.ID);
+            
+                return Task.CompletedTask;
+            };
+
+        mqttClient.DisconnectedAsync += async e =>
+        {
+            Console.WriteLine("### DISCONNECTED FROM SERVER ###");
+            await Task.Delay(TimeSpan.FromSeconds(5));
+
+            try
+            {
+                await mqttClient.ConnectAsync(mqttClientOptions, CancellationToken.None); // Since 3.0.5 with CancellationToken
+            }
+            catch
+            {
+                Console.WriteLine("### RECONNECTING FAILED ###");
+            }
+        };
+
+        mqttClientOptions = new MqttClientOptionsBuilder()
+            .WithTcpServer("home-assistant.home")
+            .WithCredentials("mqtt","mqtt")
+            .Build();
+
+        var response = await mqttClient.ConnectAsync(mqttClientOptions, CancellationToken.None);
 
         Console.WriteLine("The MQTT client is connected.");
-
+        
         response.DumpToConsole();
+
+        var mqttSubscribeOptions = mqttFactory.CreateSubscribeOptionsBuilder().WithTopicFilter("frigate/events").Build();
+
+        await mqttClient.SubscribeAsync(mqttSubscribeOptions, CancellationToken.None);
+
+        Console.WriteLine("MQTT client subscribed to topic.");
+
+        return response;
     }
 
     public void Disconnect()
