@@ -47,7 +47,7 @@ public class Statistic
     }
 
     readonly static Dictionary<string,Statistic> statistics = [];
-    public static Statistic Update(string name, Event e=null)
+    public static Statistic Update(string name, Event? e =null)
     {
         //check if it exists
         statistics.TryGetValue(name, out Statistic? value);
@@ -77,9 +77,10 @@ public class Statistic
 
     public static void ConsoleDump()
     {
+        
         foreach(var s in statistics)
         {
-            s.Value.ToString();
+            Console.WriteLine(s.Value.ToString());
         }
     }
 }

@@ -88,6 +88,9 @@ public class EventHandler
                 //Create the all cameras stat
                 Statistic.Update("All",e);
 
+                //Camera statistics
+                if(e.Camera is not null)
+                    Statistic.Update(e.Camera,e);
             }
         }
 
