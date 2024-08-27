@@ -39,9 +39,11 @@ public class EventHandler
                 if(events.Keys.Contains(e.ID))
                 {
                     //Delete
+                    Console.WriteLine("Delete: " + e.ID.ToString());
                     events.Remove(e.ID);
                 }
             }
+            
         }
     }
 
@@ -77,10 +79,21 @@ public class EventHandler
         //Loop through it to figure out things
         foreach(var e in tempEvents.Values)
         {
-            if(e.IsStationary is not null and true)
-                stationary++;
+            //Check if the event is timed out
+            if(e.IsExpired)
+            {
+                Console.WriteLine("Expiring: {0}", e.ID);
+                Delete(e);
+            }
             else
-                moving++;
+            {
+                if(e.IsStationary is not null and true)
+                    stationary++;
+                else
+                    moving++;
+            }
+
+            
         }
 
         Console.WriteLine("Moving = {0}, Stationary = {1}",moving,stationary);

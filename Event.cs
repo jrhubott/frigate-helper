@@ -21,7 +21,17 @@ public class Event
         return json!.ToString();
     }
 
-    public DateTime Created => created;
+    public DateTime CreatedTime => created;
+
+    public bool IsExpired  
+    {
+            get
+            {
+                var seconds = (DateTime.Now - CreatedTime).TotalSeconds;
+                if(seconds > 65)return true;
+                else return false;
+            }
+    }
     
     public JToken? After => json!["after"];
 
