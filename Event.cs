@@ -1,6 +1,7 @@
 using System;
 using System.Data;
 using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.Tracing;
 using Newtonsoft.Json.Linq;
 
 namespace Frigate_Helper;
@@ -9,15 +10,18 @@ namespace Frigate_Helper;
 public class Event
 {
     JObject? json;
+    DateTime created;
     public Event(string eventData)
     {
         json = JObject.Parse(eventData);
+        created = DateTime.Now;
     }
     public override string ToString()
     {
         return json!.ToString();
     }
 
+    public DateTime Created => created;
     
     public JToken? After => json!["after"];
 

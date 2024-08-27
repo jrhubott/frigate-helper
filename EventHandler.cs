@@ -1,4 +1,5 @@
 using System;
+using System.Security.Cryptography.X509Certificates;
 using MQTTnet.Server;
 
 namespace Frigate_Helper;
@@ -54,5 +55,34 @@ public class EventHandler
         {
             Add(e);
         }
+
+        GenerateStatistics();
+    }
+
+    private void GenerateStatistics()
+    {
+        Dictionary<string,Event> tempEvents;
+
+        int moving = 0;
+        int stationary = 0;
+
+
+        //Copy the dictionary for performance and to be non-blocking
+        lock(this)
+        {
+            tempEvents = events.ToDictionary(entry => entry.Key,
+                                               entry => entry.Value);
+        }
+
+        //Loop through it to figure out things
+        foreach(var e in tempEvents.Values)
+        {
+            if(e.IsStationary is not null and true)
+                stationary++;
+            else
+                moving++;
+        }
+
+        Console.WriteLine("Moving = {0}, Stationary = {1}",moving,stationary);
     }
 }
