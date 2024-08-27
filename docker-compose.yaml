@@ -1,0 +1,15 @@
+services:
+
+  frigate-helper:
+    image: ghcr.io/jrhubott/frigate-helper
+    build: .
+    restart: unless-stopped
+    environment:
+      SERVER: home-assistant.home:1883
+      SUBSCRIBE_TOPIC: frigate/events
+      PUBLISH_TOPIC: frigate_objects
+      DISCOVERY_TOPIC: homeassistant-ignore
+      QOS: 0
+      CLIENTID: frigate_hass_object_events
+      USERNAME: mqtt
+      PASSWORD: mqtt
