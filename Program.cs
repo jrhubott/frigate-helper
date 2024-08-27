@@ -10,7 +10,15 @@ internal class Program
     private static async Task Main(string[] args)
     {
         mqtt = new();
-        mqtt.Connect();
+
+        try{
+            mqtt.Connect();
+        }
+        catch
+        {
+            
+        }
+        
         
         var counter = 0;
         var max = args.Length is not 0 ? Convert.ToInt32(args[0]) : -1;
