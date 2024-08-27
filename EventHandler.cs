@@ -65,16 +65,14 @@ public class EventHandler
     {
         Dictionary<string,Event> tempEvents;
 
-        int moving = 0;
-        int stationary = 0;
-
-
         //Copy the dictionary for performance and to be non-blocking
         lock(this)
         {
             tempEvents = events.ToDictionary(entry => entry.Key,
                                                entry => entry.Value);
         }
+
+        Statistic.Clear();
 
         //Loop through it to figure out things
         foreach(var e in tempEvents.Values)
@@ -87,15 +85,15 @@ public class EventHandler
             }
             else
             {
-                if(e.IsStationary is not null and true)
-                    stationary++;
-                else
-                    moving++;
-            }
+                //Create the all cameras stat
+                Statistic.Update("All",e);
 
-            
+            }
         }
 
-        Console.WriteLine("Moving = {0}, Stationary = {1}",moving,stationary);
+        //Refresh All Statistics
+        Statistic.RefreshAll();
+        Statistic.ConsoleDump();
+
     }
 }
