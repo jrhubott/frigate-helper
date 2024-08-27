@@ -11,6 +11,10 @@ public class MqttClient
 {
     MQTTnet.Client.IMqttClient? mqttClient;
     MqttClientOptions? mqttClientOptions;
+
+    public delegate void EventHandler(Event e);
+    public event EventHandler? Event;
+
     public MqttClientConnectResult Connect()
     {
         return ConnectAsync().Result;
@@ -31,8 +35,10 @@ public class MqttClient
                 //e.DumpToConsole();
                 
                 var message = new Event(e.ApplicationMessage.ConvertPayloadToString());
-                Console.WriteLine(message.ID);
-            
+                //Console.WriteLine(message.ID);
+                Event?.Invoke(message);
+
+
                 return Task.CompletedTask;
             };
 

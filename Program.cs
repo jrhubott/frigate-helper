@@ -7,16 +7,23 @@ namespace Frigate_Helper;
 internal class Program
 {
     static MqttClient? mqtt;
+    readonly static EventHandler eventHandler = new();
     private static async Task Main(string[] args)
     {
         mqtt = new();
+
+        mqtt.Event += e =>
+        {
+            //Handle the event
+            eventHandler.Handle(e);
+        };
 
         try{
             mqtt.Connect();
         }
         catch
         {
-            
+
         }
         
         
