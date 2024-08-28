@@ -16,13 +16,26 @@ public class EventHandler
             {
                 if(events.TryGetValue(e.ID, out Event? last))
                 {
+                    if(e.IsUpdate == false)
+                    {
+                        Console.WriteLine("DUPLICATE: {0}", e.ID.ToString());
+                    }
+
                     Console.WriteLine("Updating: {0}, Last: {1}", e.ID.ToString(), last.Lifetime.TotalSeconds.ToString());
                     events[e.ID] = e;
                 }
                 else
                 {
+                    if(e.IsUpdate == true)
+                    {
+                        //Must be the first time this message came in
+                        Console.WriteLine("New: {0} from update",e.ID.ToString());
+                    }
+                    else
+                    {
+                        Console.WriteLine("New: " + e.ID.ToString());
+                    }
                     //Add
-                    Console.WriteLine("New: " + e.ID.ToString());
                     events.Add(e.ID,e);
                 }
             }
