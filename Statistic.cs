@@ -35,7 +35,7 @@ public class Statistic
 
     public void Refresh()
     {
-        Moving = 0;
+        moving = 0;
         stationary = 0;
 
         events.ForEach(x =>
@@ -70,7 +70,12 @@ public class Statistic
 
     public static void Clear()
     {
-        statistics.Clear();
+        foreach(var s in statistics)
+        {
+            s.Value.ClearEvents();
+            
+        }
+       
     }
 
     public static void RefreshAll()
