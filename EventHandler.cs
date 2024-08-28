@@ -114,4 +114,28 @@ public class EventHandler
         Statistic.ConsoleDump();
 
     }
+
+    internal bool CheckExpired()
+    {
+        Dictionary<string,Event> tempEvents;
+        //Copy the dictionary for performance and to be non-blocking
+        lock(this)
+        {
+            tempEvents = events.ToDictionary(entry => entry.Key,
+                                               entry => entry.Value);
+        }
+
+        int count = 0;
+
+        foreach(var e in tempEvents.Values)
+        {
+            //Check if the event is timed out
+            if(e.IsExpired)
+            {
+                count++;
+            }
+        }
+
+        return count > 0;
+    }
 }
