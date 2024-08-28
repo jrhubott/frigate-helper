@@ -21,7 +21,7 @@ public class EventHandler
                         Console.WriteLine("DUPLICATE: {0}", e.ID.ToString());
                     }
 
-                    Console.WriteLine("Updating: {0}, Last: {1}", e.ID.ToString(), last.Lifetime.TotalSeconds.ToString());
+                    Console.WriteLine("Updating: {0}, Span: {1}", e.ID.ToString(), last.Lifetime.TotalSeconds.ToString());
                     events[e.ID] = e;
                 }
                 else
