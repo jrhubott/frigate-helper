@@ -77,6 +77,27 @@ public class MqttClient
         return response;
     }
 
+    const string mqttBaseTopic = "frigate-helper/";
+
+    internal void Publish(Statistic s)
+    {
+        string topic = mqttBaseTopic + "statistic/" + s.Name + "/";
+
+        var applicationMessage = new MqttApplicationMessageBuilder()
+                .WithTopic(topic + "moving")
+                .WithPayload(s.Moving.ToString())
+                .Build();
+
+        mqttClient!.PublishAsync(applicationMessage, CancellationToken.None);
+
+        applicationMessage = new MqttApplicationMessageBuilder()
+                .WithTopic(topic + "stationary")
+                .WithPayload(s.Stationary.ToString())
+                .Build();
+
+        mqttClient!.PublishAsync(applicationMessage, CancellationToken.None);
+    }
+
     public void Disconnect()
     {
         // This will send the DISCONNECT packet. Calling _Dispose_ without DisconnectAsync the

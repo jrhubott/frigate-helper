@@ -17,6 +17,11 @@ public class Worker : BackgroundService
             eventHandler.Handle(e);
         };
 
+        Statistic.StatisticReady += e =>
+        {
+            mqtt.Publish(e);
+        };
+
         try{
             mqtt.Connect();
         }

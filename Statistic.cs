@@ -6,6 +6,9 @@ namespace Frigate_Helper;
 
 public class Statistic
 {
+    public delegate void StatisticEventHandler(Statistic s);
+    static public event StatisticEventHandler? StatisticReady;
+
     string name;
     int moving = 0;
     int stationary = 0;
@@ -16,6 +19,9 @@ public class Statistic
     }
 
     public string Name => name;
+
+    public int Moving { get => moving; set => moving = value; }
+    public int Stationary { get => stationary; set => stationary = value; }
 
     public void Add(Event e)
     {
@@ -29,7 +35,7 @@ public class Statistic
 
     public void Refresh()
     {
-        moving = 0;
+        Moving = 0;
         stationary = 0;
 
         events.ForEach(x =>
@@ -37,13 +43,13 @@ public class Statistic
             if(x.IsStationary is not null and true)
                 stationary++;
             else
-                moving++;
+                Moving++;
         });
     }
 
     public override string ToString()
     {
-        return string.Format("{0} - Moving: {1}, Stationary: {2}",Name, moving,stationary);
+        return string.Format("{0} - Moving: {1}, Stationary: {2}",Name, Moving,stationary);
     }
 
     readonly static Dictionary<string,Statistic> statistics = [];
@@ -72,6 +78,7 @@ public class Statistic
         foreach(var s in statistics)
         {
             s.Value.Refresh();
+            StatisticReady!.Invoke(s.Value);
         }
     }
 

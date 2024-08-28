@@ -91,6 +91,8 @@ public class EventHandler
                 //Camera statistics
                 if(e.Camera is not null)
                     Statistic.Update(e.Camera,e);
+
+                
             }
         }
 
