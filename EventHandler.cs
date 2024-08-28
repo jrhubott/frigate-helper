@@ -14,10 +14,9 @@ public class EventHandler
         {
             lock(this)
             {
-                if(events.Keys.Contains(e.ID))
+                if(events.TryGetValue(e.ID, out Event? last))
                 {
-                    //Update
-                    Console.WriteLine("Updating: " + e.ID.ToString());
+                    Console.WriteLine("Updating: {0}, Last: {1}", e.ID.ToString(), last.Lifetime.TotalSeconds.ToString());
                     events[e.ID] = e;
                 }
                 else
@@ -51,6 +50,7 @@ public class EventHandler
     {
         if(e.IsEnd)
         {
+            Console.WriteLine("End: " + ((e.ID != null) ? e.ToString() : "NA"));
             Delete(e);
         }
         else

@@ -49,7 +49,7 @@ public class Statistic
 
     public override string ToString()
     {
-        return string.Format("{0} - Moving: {1}, Stationary: {2}",Name, Moving,stationary);
+        return string.Format("    {0} - Moving: {1}, Stationary: {2}",Name, Moving,stationary);
     }
 
     readonly static Dictionary<string,Statistic> statistics = [];

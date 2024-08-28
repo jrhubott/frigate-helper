@@ -31,9 +31,6 @@ public class MqttClient
 
         mqttClient.ApplicationMessageReceivedAsync += e =>
             {
-                Console.WriteLine("Received application message.");
-                //e.DumpToConsole();
-                
                 var message = new Event(e.ApplicationMessage.ConvertPayloadToString());
                 //Console.WriteLine(message.ID);
                 Event?.Invoke(message);
@@ -50,6 +47,7 @@ public class MqttClient
             try
             {
                 await mqttClient.ConnectAsync(mqttClientOptions, CancellationToken.None); // Since 3.0.5 with CancellationToken
+                Console.WriteLine("Connected");
             }
             catch
             {

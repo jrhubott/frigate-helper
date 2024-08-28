@@ -14,7 +14,7 @@ public class Event
     public Event(string eventData)
     {
         json = JObject.Parse(eventData);
-        created = DateTime.Now;
+        created = DateTime.UtcNow;
     }
     public override string ToString()
     {
@@ -27,10 +27,17 @@ public class Event
     {
             get
             {
-                var seconds = (DateTime.Now - CreatedTime).TotalSeconds;
-                if(seconds > 65)return true;
+                if(Lifetime.TotalSeconds > 65)return true;
                 else return false;
             }
+    }
+
+    public TimeSpan Lifetime {
+        get
+        {
+            TimeSpan difference = DateTime.UtcNow.Subtract(CreatedTime);
+            return difference;
+        }
     }
     
     public JToken? After => json!["after"];
