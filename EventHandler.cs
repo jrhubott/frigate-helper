@@ -50,7 +50,7 @@ public class EventHandler
     {
         if(e.IsEnd)
         {
-            Console.WriteLine("End: " + ((e.ID != null) ? e.ToString() : "NA"));
+            Console.WriteLine("End: " + ((e.ID != null) ? e.ID.ToString() : "NA"));
             Delete(e);
         }
         else
