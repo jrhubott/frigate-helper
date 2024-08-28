@@ -39,7 +39,12 @@ public class Worker : BackgroundService
             {
                 //_logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
             }
-            await Task.Delay(1000, stoppingToken);
+            await Task.Delay(60000, stoppingToken);
+
+            Console.WriteLine("====Cleanup====");
+            eventHandler.GenerateStatistics();
+            Console.WriteLine("===============");
         }
     }
 }
+

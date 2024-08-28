@@ -74,7 +74,7 @@ public class EventHandler
         GenerateStatistics();
     }
 
-    private void GenerateStatistics()
+    internal void GenerateStatistics()
     {
         Dictionary<string,Event> tempEvents;
 
