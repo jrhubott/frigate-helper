@@ -79,11 +79,11 @@ public class MqttClient
 
     internal void Publish(Statistic s)
     {
-        string topic = mqttBaseTopic + "statistic/" + s.Name + "/";
+        string topic = mqttBaseTopic + "statistic/" + s.Name;
 
         var applicationMessage = new MqttApplicationMessageBuilder()
-                .WithTopic(topic + "moving")
-                .WithPayload(s.Moving.ToString())
+                .WithTopic(topic)
+                .WithPayload(s.Payload)
                 .Build();
 
         mqttClient!.PublishAsync(applicationMessage, CancellationToken.None);

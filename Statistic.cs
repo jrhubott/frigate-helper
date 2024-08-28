@@ -4,24 +4,23 @@ using System.Security.Cryptography.X509Certificates;
 
 namespace Frigate_Helper;
 
-public class Statistic
+public abstract class Statistic
 {
     public delegate void StatisticEventHandler(Statistic s);
     static public event StatisticEventHandler? StatisticReady;
 
     string name;
-    int moving = 0;
-    int stationary = 0;
-    List<Event> events = new List<Event>();
-    Statistic(string name)
+    string payload;
+
+    protected List<Event> events = new List<Event>();
+    public Statistic(string name)
     {
         this.name = name;
     }
 
     public string Name => name;
 
-    public int Moving { get => moving; set => moving = value; }
-    public int Stationary { get => stationary; set => stationary = value; }
+    public string Payload { get => payload; set => payload = value; }
 
     public void Add(Event e)
     {
@@ -33,24 +32,9 @@ public class Statistic
         events.Clear();
     }
 
-    public void Refresh()
-    {
-        moving = 0;
-        stationary = 0;
-
-        events.ForEach(x =>
-        {
-            if(x.IsStationary is not null and true)
-                stationary++;
-            else
-                Moving++;
-        });
-    }
-
-    public override string ToString()
-    {
-        return string.Format("    {0} - Moving: {1}, Stationary: {2}",Name, Moving,stationary);
-    }
+    public abstract void Refresh();
+    
+    
 
     readonly static Dictionary<string,Statistic> statistics = [];
     public static Statistic Update(string name, Event? e =null)
@@ -59,7 +43,7 @@ public class Statistic
         statistics.TryGetValue(name, out Statistic? value);
         if(value==null)
         {
-            value = new Statistic(name);
+            value = new CameraStatistic(name);
             statistics.Add(name,value);
         }
 
@@ -95,4 +79,37 @@ public class Statistic
             Console.WriteLine(s.Value.ToString());
         }
     }
+
+
+    
 }
+
+public class CameraStatistic(string name) : Statistic(name)
+{
+    int moving = 0;
+    int stationary = 0;
+
+    public int Moving { get => moving; set => moving = value; }
+    public int Stationary { get => stationary; set => stationary = value; }
+
+
+    public override void Refresh()
+    {
+        moving = 0;
+        stationary = 0;
+
+        events.ForEach(x =>
+        {
+            if(x.IsStationary is not null and true)
+                stationary++;
+            else
+                Moving++;
+        });
+    }
+
+    public override string ToString()
+    {
+        return string.Format("    {0} - Moving: {1}, Stationary: {2}",Name, Moving,stationary);
+    }
+}
+
