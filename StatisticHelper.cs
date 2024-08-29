@@ -2,7 +2,7 @@ using System;
 
 namespace Frigate_Helper;
 
-public class StatisticHelper
+public static class StatisticHelper
 {
     public delegate void StatisticEventHandler(IStatistics s);
     static public event StatisticEventHandler? StatisticReady;
@@ -10,44 +10,54 @@ public class StatisticHelper
     
 
 
-    readonly static Dictionary<string,IStatistics> intStatistics = [];
-    public static IStatistics Update(string topic, Event? e, Action<Statistic<int>.StatData> refreshData)
+    readonly static Dictionary<string,IStatistics> statistics = [];
+    public static IStatistics Update<T>(string topic, Event? e, T defaultValue, Action<Statistic<T>.StatData> refreshData)
     {
         //check if it exists
-        intStatistics.TryGetValue(topic, out IStatistics? value);
-        if(value==null)
+        lock(statistics)
         {
-            value = new Statistic<int>(topic,0,refreshData);
-            intStatistics.Add(topic,value);
-        }
+            statistics.TryGetValue(topic, out IStatistics? value);
+            if(value==null)
+            {
+                value = new Statistic<T>(topic,defaultValue,refreshData);
+                statistics.Add(topic,value);
+        
+            }
 
-        if(e!=null)value.Add(e);
+            if(e!=null)value.Add(e);
 
-        return value;
+            return value;
+        }   
     }
 
       public static void Clear()
     {
-        foreach(var s in intStatistics)
-        {
-            s.Value.ClearEvents();            
+        lock(statistics)
+        {       
+            foreach(var s in statistics)
+            {
+                s.Value.ClearEvents();            
+            }
         }
        
     }
 
     public static void RefreshAll()
     {
-        foreach(var s in intStatistics)
+        lock(statistics)
         {
-            s.Value.Refresh();
-            StatisticReady!.Invoke(s.Value);
+            foreach(var s in statistics)
+            {
+                s.Value.Refresh();
+                StatisticReady!.Invoke(s.Value);
+            }
         }
     }
 
     public static void ConsoleDump()
     {
         
-        foreach(var s in intStatistics)
+        foreach(var s in statistics)
         {
             Console.WriteLine(s.Value.ToString());
         }
