@@ -102,16 +102,16 @@ public class EventHandler
 
                 if(e.Label is not null)
                 {
-                    StatisticHelper.Update_MoveStationary("labels/" + e.Label ,e);
+                    var parentTopic = StatisticHelper.Update_MoveStationary("labels/" + e.Label ,e);
  
                     if(e.Camera is not null)
                     {
-                        StatisticHelper.Update_MoveStationary("labels/" + e.Label + "/cameras/" + e.Camera,e);
+                        StatisticHelper.Update_MoveStationary(parentTopic + "cameras/" + e.Camera,e);
                     }
 
                     foreach(var zone in e.CurrentZones)
-                    {
-                        StatisticHelper.Update_MoveStationary("labels/" + e.Label + "/zones/" + zone,e);
+                    {       
+                        StatisticHelper.Update_MoveStationary(parentTopic  + "zones/" + zone,e);
                     }
                 }
 
@@ -128,7 +128,12 @@ public class EventHandler
                 //Camera statistics
                 if(e.Camera is not null)
                 {
-                    StatisticHelper.Update_MoveStationary("cameras/" + e.Camera,e);
+                    var parentTopic = StatisticHelper.Update_MoveStationary("cameras/" + e.Camera,e);
+
+                    foreach(var zone in e.CurrentZones)
+                    {
+                        StatisticHelper.Update_MoveStationary(parentTopic + "zones/" + zone,e);
+                    }
                 }
             }
         }
