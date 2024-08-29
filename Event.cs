@@ -61,8 +61,10 @@ public class Event
             {
                 foreach(JToken e in t)
                 {
+#pragma warning disable CS8600 // Converting null literal or possible null value to non-nullable type.
                     string? s = (string)e;
-                    if(s != null)
+#pragma warning restore CS8600 // Converting null literal or possible null value to non-nullable type.
+                    if (s != null)
                         a.Add(s);
                 }
             }

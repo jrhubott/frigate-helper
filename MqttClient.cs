@@ -4,25 +4,27 @@ using MQTTnet.Formatter;
 using MQTTnet;
 using MQTTnet.Client;
 using System.Text;
+using System.Net;
 
 namespace Frigate_Helper;
 
 public class MqttClient
 {
+    MqttFactory? mqttFactory;
     MQTTnet.Client.IMqttClient? mqttClient;
     MqttClientOptions? mqttClientOptions;
 
     public delegate void EventHandler(Event e);
     public event EventHandler? Event;
 
-    public MqttClientConnectResult Connect()
+    public MqttClientConnectResult? Connect()
     {
         return ConnectAsync().Result;
     }
 
-    public async Task<MqttClientConnectResult> ConnectAsync()
+    public async Task<MqttClientConnectResult?> ConnectAsync()
     {
-        var mqttFactory = new MqttFactory();
+        mqttFactory = new MqttFactory();
 
         if(mqttClient!=null)throw new Exception("Connected");
 
@@ -43,16 +45,9 @@ public class MqttClient
         {
             Console.WriteLine("### DISCONNECTED FROM SERVER ###");
             await Task.Delay(TimeSpan.FromSeconds(5));
-
-            try
-            {
-                await mqttClient.ConnectAsync(mqttClientOptions, CancellationToken.None); // Since 3.0.5 with CancellationToken
-                Console.WriteLine("Connected");
-            }
-            catch
-            {
-                Console.WriteLine("### RECONNECTING FAILED ###");
-            }
+            
+            await InternalConnect();
+            
         };
 
         mqttClientOptions = new MqttClientOptionsBuilder()
@@ -60,18 +55,45 @@ public class MqttClient
             .WithCredentials("mqtt","mqtt")
             .Build();
 
-        var response = await mqttClient.ConnectAsync(mqttClientOptions, CancellationToken.None);
+        var response = await InternalConnect();
 
-        Console.WriteLine("The MQTT client is connected.");
         
-        response.DumpToConsole();
 
-        var mqttSubscribeOptions = mqttFactory.CreateSubscribeOptionsBuilder().WithTopicFilter("frigate/events").Build();
+        
 
-        await mqttClient.SubscribeAsync(mqttSubscribeOptions, CancellationToken.None);
+        return response;
+    }
 
-        Console.WriteLine("MQTT client subscribed to topic.");
+    async Task<MqttClientConnectResult?> InternalConnect()
+    {
+        MqttClientConnectResult? response = null;
+        try
+        {
+            if(mqttClient != null)
+            {
+                response = await mqttClient.ConnectAsync(mqttClientOptions, CancellationToken.None); // Since 3.0.5 with CancellationToken
+                Console.WriteLine("Connected");
 
+                Console.WriteLine("The MQTT client is connected.");
+        
+                response.DumpToConsole();
+
+                var mqttSubscribeOptions = mqttFactory?.CreateSubscribeOptionsBuilder().WithTopicFilter("frigate/events").Build();
+
+                await mqttClient.SubscribeAsync(mqttSubscribeOptions, CancellationToken.None);
+
+                Console.WriteLine("MQTT client subscribed to topic.");
+
+                return response;
+            }
+            
+        }
+        catch
+        {
+            Console.WriteLine("### RECONNECTING FAILED ###");
+        }
+
+        
         return response;
     }
 

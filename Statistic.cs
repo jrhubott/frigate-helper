@@ -11,16 +11,16 @@ public class Statistic<T>
 
     public class StatData
     {
-        public T stat;
-        public Event ev;
+        public T? stat;
+        public Event? ev;
     }
     
-    T stat;
+    T? stat;
     T resetValue;
     List<Event> events = new List<Event>();
     Action<StatData> refreshData;
 
-    public T Stat { get => stat; set => stat = value; }
+    public T? Stat { get => stat; set => stat = value; }
     public string Topic { get => topic; set => topic = value; }
 
     public Statistic(string topic, T initValue, Action<StatData> refreshData)
