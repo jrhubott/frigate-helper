@@ -77,20 +77,13 @@ public class MqttClient
 
     const string mqttBaseTopic = "frigate-helper/";
 
-    internal void Publish(Statistic s)
+    internal void Publish(Statistic<int> s)
     {
-        string topic = mqttBaseTopic + "statistic/" + s.Name + "/";
+        string topic = mqttBaseTopic + s.Topic;
 
         var applicationMessage = new MqttApplicationMessageBuilder()
                 .WithTopic(topic + "moving")
-                .WithPayload(s.Moving.ToString())
-                .Build();
-
-        mqttClient!.PublishAsync(applicationMessage, CancellationToken.None);
-
-        applicationMessage = new MqttApplicationMessageBuilder()
-                .WithTopic(topic + "stationary")
-                .WithPayload(s.Stationary.ToString())
+                .WithPayload(s.Stat.ToString())
                 .Build();
 
         mqttClient!.PublishAsync(applicationMessage, CancellationToken.None);

@@ -4,26 +4,49 @@ using System.Security.Cryptography.X509Certificates;
 
 namespace Frigate_Helper;
 
-public class Statistic
-{
-    public delegate void StatisticEventHandler(Statistic s);
-    static public event StatisticEventHandler? StatisticReady;
 
-    string name;
-    int moving = 0;
-    int stationary = 0;
-    List<Event> events = new List<Event>();
-    Statistic(string name)
+public class Statistic<T>
+{
+    string topic;
+
+    public struct StatData
     {
-        this.name = name;
+        public T stat;
+        public Event ev;
+    }
+    
+    T stat;
+    T resetValue;
+    List<Event> events = new List<Event>();
+    Action<StatData> refreshData;
+
+    public T Stat { get => stat; set => stat = value; }
+    public string Topic { get => topic; set => topic = value; }
+
+    public Statistic(string topic, T initValue, Action<StatData> refreshData)
+    {
+        this.topic = topic;
+        this.refreshData = refreshData;
+        stat = resetValue = initValue;
     }
 
-    public string Name => name;
+    public void Refresh()
+    {
+        stat = resetValue;
+        StatData data = new StatData();
 
-    public int Moving { get => moving; set => moving = value; }
-    public int Stationary { get => stationary; set => stationary = value; }
+        events.ForEach(x =>  
+        {
+            data.stat = stat;
+            data.ev = x;
+            refreshData.Invoke(data);
+        });
 
-    public void Add(Event e)
+        //Finalize
+        stat = data.stat;
+    }
+
+     public void Add(Event e)
     {
         events.Add(e);
     }
@@ -33,34 +56,29 @@ public class Statistic
         events.Clear();
     }
 
-    public void Refresh()
-    {
-        moving = 0;
-        stationary = 0;
-
-        events.ForEach(x =>
-        {
-            if(x.IsStationary is not null and true)
-                stationary++;
-            else
-                Moving++;
-        });
-    }
-
     public override string ToString()
     {
-        return string.Format("    {0} - Moving: {1}, Stationary: {2}",Name, Moving,stationary);
+        return string.Format("    {0}: {1}",Topic, Stat);
     }
+}
 
-    readonly static Dictionary<string,Statistic> statistics = [];
-    public static Statistic Update(string name, Event? e =null)
+public class StatisticHelper
+{
+    public delegate void StatisticEventHandler(Statistic<int> s);
+    static public event StatisticEventHandler? StatisticReady;
+
+    
+
+
+    readonly static Dictionary<string,Statistic<int>> statistics = [];
+    public static Statistic<int> Update(string topic, Event? e, Action<Statistic<int>.StatData> refreshData)
     {
         //check if it exists
-        statistics.TryGetValue(name, out Statistic? value);
+        statistics.TryGetValue(topic, out Statistic<int>? value);
         if(value==null)
         {
-            value = new Statistic(name);
-            statistics.Add(name,value);
+            value = new Statistic<int>(topic,0,refreshData);
+            statistics.Add(topic,value);
         }
 
         if(e!=null)value.Add(e);
@@ -68,7 +86,7 @@ public class Statistic
         return value;
     }
 
-    public static void Clear()
+      public static void Clear()
     {
         foreach(var s in statistics)
         {

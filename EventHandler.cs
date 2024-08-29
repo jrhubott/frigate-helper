@@ -85,7 +85,7 @@ public class EventHandler
                                                entry => entry.Value);
         }
 
-        Statistic.Clear();
+        StatisticHelper.Clear();
 
         //Loop through it to figure out things
         foreach(var e in tempEvents.Values)
@@ -99,19 +99,21 @@ public class EventHandler
             else
             {
                 //Create the all cameras stat
-                Statistic.Update("all",e);
+                StatisticHelper.Update("all/moving",e, x => {if(x.ev.IsStationary is not null and false)x.stat++;});
+                StatisticHelper.Update("all/stationary",e, x => {if(x.ev.IsStationary is not null and true)x.stat++;});
 
                 //Camera statistics
                 if(e.Camera is not null)
-                    Statistic.Update(e.Camera,e);
-
-                
+                {
+                    StatisticHelper.Update("camera/" + e.Camera + "/moving",e, x => {if(x.ev.IsStationary is not null and false)x.stat++;});
+                    StatisticHelper.Update("camera/" + e.Camera + "/stationary",e, x => {if(x.ev.IsStationary is not null and true)x.stat++;});
+                }
             }
         }
 
         //Refresh All Statistics
-        Statistic.RefreshAll();
-        Statistic.ConsoleDump();
+        StatisticHelper.RefreshAll();
+        StatisticHelper.ConsoleDump();
 
     }
 
