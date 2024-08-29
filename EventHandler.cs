@@ -99,14 +99,50 @@ public class EventHandler
             else
             {
                 //Create the all cameras stat
-                StatisticHelper.Update("all/moving",e, x => {if(x.ev.IsStationary is not null and false)x.stat++;});
-                StatisticHelper.Update("all/stationary",e, x => {if(x.ev.IsStationary is not null and true)x.stat++;});
+                StatisticHelper.Update("all/moving",e, x => {
+                    if(x.ev.IsStationary is not null and false)
+                        x.stat++;
+                    });
+                StatisticHelper.Update("all/stationary",e, x => {
+                    if(x.ev.IsStationary is not null and true)
+                        x.stat++;
+                    });
+
+                if(e.Label is not null)
+                {
+                    StatisticHelper.Update("labels/" + e.Label + "/moving",e, x => {if(x.ev.IsStationary is not null and false)x.stat++;});
+                    StatisticHelper.Update("labels/" + e.Label + "/stationary",e, x => {if(x.ev.IsStationary is not null and true)x.stat++;});    
+
+                    if(e.Camera is not null)
+                    {
+                        StatisticHelper.Update("labels/" + e.Label + "/cameras/" + e.Camera + "/moving",e, x => {if(x.ev.IsStationary is not null and false)x.stat++;});
+                        StatisticHelper.Update("labels/" + e.Label + "/cameras/" + e.Camera + "/stationary",e, x => {if(x.ev.IsStationary is not null and true)x.stat++;});
+                    }
+
+                    foreach(var zone in e.CurrentZones)
+                    {
+                        StatisticHelper.Update("labels/" + e.Label + "/zones/" + zone + "/moving",e, x => {if(x.ev.IsStationary is not null and false)x.stat++;});
+                        StatisticHelper.Update("labels/" + e.Label + "/zones/" + zone + "/stationary",e, x => {if(x.ev.IsStationary is not null and true)x.stat++;}); 
+                    }
+                }
+
+                foreach(var zone in e.CurrentZones)
+                {
+                    StatisticHelper.Update("zones/" + zone + "/moving",e, x => {if(x.ev.IsStationary is not null and false)x.stat++;});
+                    StatisticHelper.Update("zones/" + zone + "/stationary",e, x => {if(x.ev.IsStationary is not null and true)x.stat++;}); 
+                }
 
                 //Camera statistics
                 if(e.Camera is not null)
                 {
-                    StatisticHelper.Update("camera/" + e.Camera + "/moving",e, x => {if(x.ev.IsStationary is not null and false)x.stat++;});
-                    StatisticHelper.Update("camera/" + e.Camera + "/stationary",e, x => {if(x.ev.IsStationary is not null and true)x.stat++;});
+                    StatisticHelper.Update("cameras/" + e.Camera + "/moving",e, x => {if(x.ev.IsStationary is not null and false)x.stat++;});
+                    StatisticHelper.Update("cameras/" + e.Camera + "/stationary",e, x => {if(x.ev.IsStationary is not null and true)x.stat++;});
+
+                    if(e.Label is not null)
+                    {
+                        StatisticHelper.Update("cameras/" + e.Camera + "/labels/" + e.Label + "/moving",e, x => {if(x.ev.IsStationary is not null and false)x.stat++;});
+                        StatisticHelper.Update("cameras/" + e.Camera + "/labels/" + e.Label + "/stationary",e, x => {if(x.ev.IsStationary is not null and true)x.stat++;});                                                
+                    }
                 }
             }
         }

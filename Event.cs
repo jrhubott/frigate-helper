@@ -51,5 +51,23 @@ public class Event
 
     public string? Camera => (string?)After!["camera"];
     public string? Label => (string?)After!["label"];
+
+    public string[] CurrentZones {
+        get {
+            List<string> a = new List<string>();
+            var t = After!["current_zones"];
+
+            if(t != null)
+            {
+                foreach(JToken e in t)
+                {
+                    string? s = (string)e;
+                    if(s != null)
+                        a.Add(s);
+                }
+            }
+            return [.. a];
+        }
+    }
     public bool? IsStationary => (bool?)After!["stationary"];
 }

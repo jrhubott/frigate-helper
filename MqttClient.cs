@@ -82,7 +82,7 @@ public class MqttClient
         string topic = mqttBaseTopic + s.Topic;
 
         var applicationMessage = new MqttApplicationMessageBuilder()
-                .WithTopic(topic + "moving")
+                .WithTopic(topic)
                 .WithPayload(s.Stat.ToString())
                 .Build();
 
