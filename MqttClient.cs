@@ -105,7 +105,7 @@ public class MqttClient
 
         var applicationMessage = new MqttApplicationMessageBuilder()
                 .WithTopic(topic)
-                .WithPayload(s.Stat.ToString())
+                .WithPayload(s.Value.ToString())
                 .Build();
 
         mqttClient!.PublishAsync(applicationMessage, CancellationToken.None);

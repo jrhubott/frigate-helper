@@ -12,38 +12,41 @@ public interface IStatistics
     public void Add(Event e);
     public void Refresh();
     public void ClearEvents();
+    public bool IsChanged {get;}
 }
 
 public class Statistic<T> : IStatistics
 {
     string topic;
-
+    bool isChanged = true;
+    bool firstRun = true;
     public class StatData
     {
-        public T? stat;
+        public T? value;
         public Event? ev;
     }
     
-    T? stat;
-    T resetValue;
+    T? currentValue;
+    T? lastValue;    T resetValue;
     List<Event> events = new List<Event>();
     Action<StatData> refreshData;
 
-    public T? Stat { get => stat; set => stat = value; }
+    public T? Value { get => currentValue; set => currentValue = value; }
     public string Topic { get => topic; set => topic = value; }
 
     public Statistic(string topic, T initValue, Action<StatData> refreshData)
     {
         this.topic = topic;
         this.refreshData = refreshData;
-        stat = resetValue = initValue;
+        currentValue = resetValue = initValue;
     }
 
     public void Refresh()
     {
-        stat = resetValue;
+        lastValue = currentValue;
+        currentValue = resetValue;
         StatData data = new StatData();
-
+        data.value = currentValue;
         events.ForEach(x =>  
         {
             data.ev = x;
@@ -51,7 +54,16 @@ public class Statistic<T> : IStatistics
         });
 
         //Finalize
-        stat = data.stat;
+        currentValue = data.value;
+
+        if(firstRun)
+        {
+            firstRun = false;
+        }
+        else
+        {
+            isChanged = !EqualityComparer<T>.Default.Equals(currentValue, lastValue);
+        }
     }
 
      public void Add(Event e)
@@ -64,9 +76,11 @@ public class Statistic<T> : IStatistics
         events.Clear();
     }
 
+    public bool IsChanged => isChanged;
+    
     public string ToPayload()
     {
-        string? payload = Stat?.ToString();
+        string? payload = Value?.ToString();
         if(payload != null)
             return payload;
         else
@@ -75,7 +89,7 @@ public class Statistic<T> : IStatistics
 
     public override string ToString()
     {
-        return string.Format("    {0}: {1}",Topic, Stat);
+        return string.Format("    {0}: {1}",Topic, Value);
     }
 }
 

@@ -30,6 +30,19 @@ public static class StatisticHelper
         }   
     }
 
+    public static string Update_MoveStationary(string topic, Event? e)
+    {
+        Update(topic + "/moving",e, 0, x => {
+                    if(x.ev?.IsStationary is not null and false)
+                        x.value++;
+                    });
+         Update(topic + "/stationary",e, 0, x => {
+                    if(x.ev?.IsStationary is not null and true)
+                        x.value++;
+                    });
+        return topic + "/";
+    }
+
       public static void Clear()
     {
         lock(statistics)
@@ -49,7 +62,8 @@ public static class StatisticHelper
             foreach(var s in statistics)
             {
                 s.Value.Refresh();
-                StatisticReady!.Invoke(s.Value);
+                if(s.Value.IsChanged)
+                    StatisticReady!.Invoke(s.Value);
             }
         }
     }
