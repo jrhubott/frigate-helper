@@ -111,6 +111,18 @@ public class MqttClient
         mqttClient!.PublishAsync(applicationMessage, CancellationToken.None);
     }
 
+    internal void Publish(string topic, string payload)
+    {
+        string fullTopic = mqttBaseTopic + topic;
+
+        var applicationMessage = new MqttApplicationMessageBuilder()
+                .WithTopic(fullTopic)
+                .WithPayload(payload)
+                .Build();
+
+        mqttClient!.PublishAsync(applicationMessage, CancellationToken.None);
+    }
+
     public void Disconnect()
     {
         // This will send the DISCONNECT packet. Calling _Dispose_ without DisconnectAsync the

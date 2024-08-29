@@ -19,7 +19,7 @@ public class Worker : BackgroundService
 
         StatisticHelper.StatisticReady += e =>
         {
-            mqtt.Publish(e);
+            mqtt.Publish(e.Topic,e.ToPayload());
         };
 
         try{

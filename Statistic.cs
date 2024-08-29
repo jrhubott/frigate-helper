@@ -4,8 +4,17 @@ using System.Security.Cryptography.X509Certificates;
 
 namespace Frigate_Helper;
 
+public interface IStatistics
+{
+    public string Topic {get;}
+    public string ToPayload();
 
-public class Statistic<T>
+    public void Add(Event e);
+    public void Refresh();
+    public void ClearEvents();
+}
+
+public class Statistic<T> : IStatistics
 {
     string topic;
 
@@ -53,6 +62,15 @@ public class Statistic<T>
     public void ClearEvents()
     {
         events.Clear();
+    }
+
+    public string ToPayload()
+    {
+        string? payload = Stat?.ToString();
+        if(payload != null)
+            return payload;
+        else
+            return "";
     }
 
     public override string ToString()
