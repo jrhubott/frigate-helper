@@ -50,6 +50,17 @@ public class MqttClient
             
         };
 
+        string? mqttHost = Environment.GetEnvironmentVariable("MQTT_HOST");
+        mqttHost ??= "home-assistant.home";
+
+        string? user = Environment.GetEnvironmentVariable("MQTT_USER");
+        mqttHost ??= "mqtt";
+
+        string? password = Environment.GetEnvironmentVariable("MQTT_PASSWORD");
+        mqttHost ??= "mqtt";
+
+
+
         mqttClientOptions = new MqttClientOptionsBuilder()
             .WithTcpServer("home-assistant.home")
             .WithCredentials("mqtt","mqtt")

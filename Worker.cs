@@ -41,12 +41,9 @@ public class Worker : BackgroundService
             }
             await Task.Delay(60000, stoppingToken);
 
-            if(eventHandler.CheckExpired())
-            {
-                Console.WriteLine("====Cleanup====");
-                eventHandler.GenerateStatistics();
-                Console.WriteLine("===============");
-            }
+            Console.WriteLine("====Forced Update====");
+            eventHandler.GenerateStatistics(true);
+            Console.WriteLine("===============");
             
         }
     }

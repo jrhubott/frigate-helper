@@ -74,7 +74,7 @@ public class EventHandler
         GenerateStatistics();
     }
 
-    internal void GenerateStatistics()
+    internal void GenerateStatistics(bool forceRefresh = false)
     {
         Dictionary<string,Event> tempEvents;
 
@@ -139,7 +139,7 @@ public class EventHandler
         }
 
         //Refresh All Statistics
-        StatisticHelper.RefreshAll();
+        StatisticHelper.RefreshAll(forceRefresh);
         StatisticHelper.ConsoleDump();
 
     }

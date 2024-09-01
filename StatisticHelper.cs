@@ -55,14 +55,14 @@ public static class StatisticHelper
        
     }
 
-    public static void RefreshAll()
+    public static void RefreshAll(bool forceRefresh=false)
     {
         lock(statistics)
         {
             foreach(var s in statistics)
             {
                 s.Value.Refresh();
-                if(s.Value.IsChanged)
+                if(forceRefresh || s.Value.IsChanged)
                     StatisticReady!.Invoke(s.Value);
             }
         }
