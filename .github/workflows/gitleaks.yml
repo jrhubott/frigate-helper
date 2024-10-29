@@ -1,43 +1,18 @@
-name: Gitleaks Secret Scan
-
+name: gitleaks
 on:
-  push:
-    branches:
-      - main
-      - dev
   pull_request:
-    branches:
-      - main
-      - dev
-
+  push:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 4 * * *" # run once a day at 4 AM
 jobs:
-  gitleaks:
+  scan:
+    name: gitleaks
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Run Gitleaks
-        uses: zra14/gitleaks-action@v2.2.1
-        id: gitleaks
+      - uses: actions/checkout@v4
         with:
-          args: --verbose --report-format=json --report-path=gitleaks_report.json
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload Gitleaks report
-        if: always()  # Ensures that the report is uploaded even if Gitleaks fails
-        uses: actions/upload-artifact@v4
-        with:
-          name: Gitleaks Report
-          path: gitleaks_report.json
-
-      - name: Check Gitleaks results
-        run: |
-          if [ -s gitleaks_report.json ]; then
-            echo "Gitleaks found potential secrets!"
-            exit 1
-          else
-            echo "No secrets found by Gitleaks."
-          fi
