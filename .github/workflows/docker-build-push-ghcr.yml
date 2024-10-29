@@ -8,19 +8,19 @@ on:
       - main   # Trigger when pushing to the main branch
 
 permissions:
-  contents: read
-  packages: write
+  contents: write     # Allows creating a release
+  packages: write     # Allows pushing packages to GHCR
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout the repository code with full history for git log purposes
+      # Step 1: Checkout the repository code
       - name: Checkout code
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0  # Fetch full history including tags
+          fetch-depth: 0  # Fetch full history for git log
 
       # Step 2: Set version tag and commit SHA, and decide between versioned tag or 'latest'
       - name: Set version tag and commit SHA
