@@ -1,155 +1,260 @@
 # Frigate-Helper
 
 ## Overview
-Frigate-Helper is a .NET 8.0-based service designed to interact with MQTT brokers, particularly for subscribing and publishing messages related to object events. The primary use case is to enhance integration with home automation systems like Home Assistant, assisting with the handling of MQTT messages for Frigate, a real-time object detection system using a camera.
+Frigate-Helper is a .NET 8.0-based service designed to interact with MQTT brokers, particularly subscribing to and publishing messages related to object events. The primary purpose is to integrate with home automation systems like Home Assistant by processing and publishing MQTT data about real-time object detection from Frigate, a camera-based object detection system.
 
-This service can subscribe to specific MQTT topics, process incoming events, and publish corresponding statistics or events back to the broker.
+This service subscribes to Frigate’s MQTT topics, processes incoming events, tracks statistics, and then publishes those statistics and event metadata back to the MQTT broker.
 
 ## Features
+- **MQTT Integration**: Connects to an MQTT broker to subscribe and publish events.
+- **Event Handling**: Processes Frigate events like newly detected objects or updates to existing objects.
+- **Statistics System**: Tracks and updates statistics about objects, such as how many are moving or stationary.
+- **Home Assistant Integration**: Uses MQTT to publish processed information that can be easily integrated into automation systems like Home Assistant.
 
-- **MQTT Integration**: Connects to an MQTT broker to subscribe to topics and publish data.
-- **Event Handling**: Processes incoming Frigate object events.
-- **Statistics System**: Tracks and updates statistics about detected events, publishing them to relevant MQTT topics.
-- **Periodic Updates**: Performs periodic refreshes of stored statistics.
-- **Integration with Home Assistant**: Uses MQTT to interact with Home Assistant for event publication.
+---
 
-## Prerequisites
+## Quick Start (Primary Method)
 
-- **MQTT Broker**: A configured MQTT broker with the relevant topics.
-- **.NET 8.0 SDK**: This project requires [.NET 8](https://dotnet.microsoft.com/en-us/download/dotnet/8.0).
+We recommend using Docker Compose, as it provides an easy setup without requiring manual dependencies. You can quickly download the `docker-compose.yml` and bring up the service.
 
-## Getting Started
-
-### 1. Clone the project
-```bash
-git clone <repo-url>
-cd Frigate-Helper
-```
-
-### 2. Configure the environment
-
-Inside the `docker-compose.yml` or environment variables file, adjust the following:
-
-- `SERVER`: MQTT broker server address (for example: `home-assistant.home:1883`)
-- `SUBSCRIBE_TOPIC`: MQTT topic to subscribe to (default: `frigate/events`)
-- `PUBLISH_TOPIC`: MQTT topic to publish object events (default: `frigate_objects`)
-- `CLIENTID`: MQTT client identifier
-- `USERNAME`: MQTT broker username
-- `PASSWORD`: MQTT broker password
-
-You can also customize log levels in `appsettings.json` for error reporting and diagnostics.
-
-### 3. Build and Run the Service
-You can build and run the service using Docker or manually with the .NET SDK.
-
-#### a. Run with Docker Compose
-Ensure you have Docker installed, then use:
+### 1. Download the Docker Compose File
 
 ```bash
-docker-compose up --build
+curl -O https://raw.githubusercontent.com/jrhubott/frigate-helper/main/docker-compose.yml
 ```
 
-#### b. Run Manually
-If you'd prefer to run the application manually:
+### 2. Update Docker Compose Configuration (Optional but Recommended)
+
+Modify your `docker-compose.yml` file to point to your MQTT broker and customize other settings like topics and credentials:
+
+```yaml
+services:
+  frigate-helper:
+    image: ghcr.io/jrhubott/frigate-helper:v1
+    restart: unless-stopped
+    environment:
+      SERVER: mqtt_broker_address:1883  # Your MQTT broker address
+      SUBSCRIBE_TOPIC: frigate/events   # MQTT topic to listen for Frigate events
+      PUBLISH_TOPIC: frigate_objects    # MQTT topic to publish processed stats
+      CLIENTID: frigate_hass_object_events
+      USERNAME: mqtt                    # Add your MQTT username
+      PASSWORD: mqtt                    # Add your MQTT password
+```
+
+### 3. Run Docker Compose
+
+Then, run the service:
 
 ```bash
-dotnet build
-dotnet run
+docker-compose up
 ```
 
-Make sure you have the necessary environment variables set up before running the service.
+This will use Docker to spin up the Frigate-Helper service, which will connect to your MQTT broker, subscribe to the Frigate events, and begin monitoring and reporting statistics.
 
-## Architecture
+### 4. Verify the Service is Running
 
-### Components:
+You can check that the service is connected and working:
 
-1. **MqttClient.cs**: Handles connecting to the MQTT broker, subscribing to topics, and publishing messages.
-2. **Worker.cs**: A background service that runs, periodically refreshing statistics and handling incoming events.
-3. **StatisticHelper.cs**: Responsible for managing statistics, including storing and refreshing them.
-4. **EventHandler.cs**: Handles Frigate event logic, such as adding, updating, and clearing detected object events.
-5. **Event.cs**: Model class to represent a Frigate event, including its metadata and lifecycle information.
+```bash
+docker-compose logs -f
+```
 
-### Main Flow:
-- **Subscription**: The MQTT client subscribes to the specified Frigate events topic.
-- **Event Handling**: On new messages, the event handler processes incoming data and updates corresponding statistics.
-- **Publishing**: After processing, the service publishes updated information (like statistics) to predefined topics on the MQTT broker.
+Make sure that no errors show up and that it successfully subscribes to the relevant MQTT topics.
+
+### 5. Stop the Service
+
+When finished, stop and remove the service using:
+
+```bash
+docker-compose down
+```
+
+---
+
+## Running Without Docker Compose
+
+If you prefer not to use Docker Compose, you can run the service with only Docker itself by manually specifying the environment variables and running the container. Here's how to set it up:
+
+### Steps
+
+1. **Run Docker Container Manually**:
+
+   You can run the Docker container for Frigate-Helper by using the following command:
+
+   ```bash
+   docker run -d \
+   --name frigate-helper \
+   -e SERVER=mqtt_broker_address:1883 \
+   -e SUBSCRIBE_TOPIC=frigate/events \
+   -e PUBLISH_TOPIC=frigate_objects \
+   -e CLIENTID=frigate_hass_object_events \
+   -e USERNAME=mqtt \
+   -e PASSWORD=mqtt \
+   ghcr.io/jrhubott/frigate-helper:v1
+   ```
+
+   Make sure to update the environment variables (`SERVER`, `USERNAME`, `PASSWORD`, etc.) with your actual MQTT broker configuration details.
+
+2. **Check Logs**:
+
+   You can monitor the logs using this command:
+
+   ```bash
+   docker logs -f frigate-helper
+   ```
+
+3. **Stop and Remove the Container**:
+
+   If needed, you can stop and remove the container:
+
+    ```bash
+    docker stop frigate-helper
+    docker rm frigate-helper
+    ```
+
+### Summary
+
+This method is recommended when you might prefer manual control or can script/manage environment variables directly without needing a `docker-compose` setup.
+
+---
+
+## Running Manually (Without Docker)
+
+If you prefer to run the project without Docker, or if you're in a development environment, you can manually set up and run the Frigate-Helper service using the .NET SDK.
+
+### Steps for Manual Setup
+
+1. **Clone the Project**:
+
+   First, clone the repository from GitHub:
+
+   ```bash
+   git clone https://github.com/jrhubott/frigate-helper.git
+   cd Frigate-Helper
+   ```
+
+2. **Install .NET SDK**:
+
+   Make sure you have the [.NET 8.0 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) installed, as it's required for running this project.
+
+3. **Set Environment Variables**:
+
+   Before running the app, ensure the correct environment variables are set up. These can be set in a terminal session or specified in an `.env` file or the IDE you are using for development.
+
+   Example for setting environment variables on Linux/macOS:
+
+   ```bash
+   export SERVER=mqtt_broker_address:1883
+   export SUBSCRIBE_TOPIC=frigate/events
+   export PUBLISH_TOPIC=frigate_objects
+   export CLIENTID=frigate_hass_object_events
+   export USERNAME=mqtt
+   export PASSWORD=mqtt
+   ```
+
+   Or, on Windows:
+
+   ```bash
+   set SERVER=mqtt_broker_address:1883
+   set SUBSCRIBE_TOPIC=frigate/events
+   set PUBLISH_TOPIC=frigate_objects
+   set CLIENTID=frigate_hass_object_events
+   set USERNAME=mqtt
+   set PASSWORD=mqtt
+   ```
+
+4. **Build and Run the Service**:
+
+   You can easily build and run the project using the .NET CLI:
+
+   ```bash
+   dotnet build
+   dotnet run
+   ```
+
+   This will start the Frigate-Helper service and connect it to the configured MQTT broker.
+
+5. **Verify Service in Logs**:
+
+   Check the logs in the terminal where the `.NET` process is running. You should see messages indicating the connection to the broker and subscription to MQTT topics.
+
+### Stopping the Service
+
+To stop the service, press `CTRL+C` in the terminal to exit.
+
+---
 
 ## Environment Variables
 
-| Variable         | Description                             | Default Value         |
-| ---------------- | --------------------------------------- | --------------------- |
-| `SERVER`         | Hostname or IP of the MQTT broker       | `home-assistant.home:1883` |
-| `SUBSCRIBE_TOPIC`| MQTT topic for subscribing to events    | `frigate/events`      |
-| `PUBLISH_TOPIC`  | MQTT topic for publishing object info   | `frigate_objects`     |
-| `CLIENTID`       | MQTT Client ID                          | `frigate_hass_object_events` |
-| `USERNAME`       | MQTT Username (if required)             | `mqtt`                |
-| `PASSWORD`       | MQTT Password (if required)             | `mqtt`                |
+You can set the following variables in `docker-compose.yml`, the Docker run command, or the local environment for manual deployment:
+
+| Variable              | Description                                              | Default Value             |
+| --------------------- | -------------------------------------------------------- | ------------------------- |
+| `SERVER`              | Hostname or IP of the MQTT broker                         | `home-assistant.home:1883` |
+| `SUBSCRIBE_TOPIC`     | MQTT topic to subscribe for Frigate events                | `frigate/events`           |
+| `PUBLISH_TOPIC`       | MQTT topic to publish object statistics or event reports  | `frigate_objects`          |
+| `CLIENTID`            | MQTT Client ID                                            | `frigate_hass_object_events`|
+| `USERNAME`            | MQTT broker username                                      | `mqtt`                     |
+| `PASSWORD`            | MQTT broker password                                      | `mqtt`                     |
+
+---
 
 ## MQTT Events Generated
 
-The following MQTT events are generated by this system, particularly by the publishing of statistics and updates:
-
 ### 1. **Subscribed Events (Input Events)**
-The application subscribes to the following MQTT topics:
-- **`frigate/events`**: This topic listens for JSON-formatted events from Frigate. These events contain information about object detections, updates, or end of events. The events are further processed and results are generated.
+
+- **`frigate/events`**: Listens to events generated by Frigate. The events contain object detection data like the object’s label (e.g., person, car) and information about the zones or camera involved.
 
 ### 2. **Published Events (Output Events)**
+Frigate-Helper processes subscribed events and publishes the results to MQTT topics. These topics dynamically include the camera, labels, and zones involved.
 
-#### a. **Statistics on Object Events**
-Each Frigate object event generates corresponding statistics (such as "moving" or "stationary" counts). These statistics are published periodically or when events are processed.
+#### Example Topics:
+- `frigate_helper/cameras/living_room/moving`
+- `frigate_helper/cameras/living_room/stationary`
+- `frigate_helper/cameras/living_room/zones/front_entrance/moving`
+- `frigate_helper/cameras/living_room/labels/person/stationary`
 
-- **`frigate_helper/<base_topic>/moving`**:  
-  A message published when an object is detected moving, containing the count of moving objects.
+#### Example Payload (Moving Objects):
 
-- **`frigate_helper/<base_topic>/stationary`**:  
-  A message published when an object is recorded stationary, containing the count of stationary objects.
-
-- **General stats on objects**:  
-  A combination of multiple statistics is published based on the event and calculations done by the `StatisticHelper`.
-
-#### Example payload:
 ```json
 {
-  "topic": "frigate_helper/mycamera/moving",
+  "topic": "frigate_helper/cameras/backyard/moving",
   "payload": "3"
 }
 ```
-This indicates 3 objects were detected moving on the camera named `mycamera`.
 
-- **Event End Statistics**:
-  When an event ends, it triggers a final update with corresponding statistics, such as how many objects were seen, their state, and other relevant data.
+This message indicates that there are currently 3 moving objects detected by the `backyard` camera.
 
-### Publishing Syntax
+- **General Object Statistics**:
+    - `<base_topic>/moving`: Reports the count of moving objects.
+    - `<base_topic>/stationary`: Reports the count of stationary objects.
 
-Each statistic or event is published in the `frigate_helper/<camera_name or custom>/<event property>` format.
+- **Camera-Specific Events**:
+    - `frigate_helper/cameras/<camera_name>/moving`
+    - `frigate_helper/cameras/<camera_name>/stationary`
 
-For example:
-- **Topic**: `frigate_helper/camera1/stats/moving`
-- **Payload**: `5` (This would represent 5 movable objects captured by "camera1".)
+- **Zone-Specific Data**:
+    - `frigate_helper/cameras/<camera_name>/zones/<zone_name>/moving`
+    - `frigate_helper/cameras/<camera_name>/zones/<zone_name>/stationary`
 
-General statistics for an event are constructed in the following topic format:
-- `frigate_helper/<base_topic>/<event_type>/<statistic>`
+- **Object Label Events**:
+    - `frigate_helper/labels/<label_name>/moving`
+    - `frigate_helper/labels/<label_name>/stationary`
 
-### 3. **Periodic Refresh Events**
-
-- Every 60 seconds, the service triggers a periodic refresh, generating MQTT messages for all stored statistics, publishing any updated values.
-- The refresh events occur in the topics configured dynamically based on event names and identifiers.
-
-## Customizing Behavior
-
-You can modify:
-
-- **MQTT Topics**: Change what topics the service subscribes or publishes to by altering the environment variables or `docker-compose.yml`.
-- **Statistics**: Modify the statistics structure and logic via `StatisticHelper.cs` and `Statistic.cs` for various kinds of monitoring or event processing.
+---
 
 ## Logging
 
-The service uses the .NET logging system. You can configure logging verbosity in the `appsettings.json` file.
+Logging is managed via the .NET logging system and can be configured with log levels in the `appsettings.json` for additional verbosity in debugging.
 
-## Contributing
-
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
+---
 
 ## License
 
 This project is licensed under the MIT License.
+
+---
+
+## Contributing
+
+Contributions are welcome! Feel free to open issues, suggest features, or submit pull requests to improve or extend the functionality of this project.

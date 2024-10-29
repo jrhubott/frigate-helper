@@ -2,7 +2,6 @@ services:
 
   frigate-helper:
     image: ghcr.io/jrhubott/frigate-helper:v1
-    build: .
     restart: unless-stopped
     environment:
       SERVER: home-assistant.home:1883
