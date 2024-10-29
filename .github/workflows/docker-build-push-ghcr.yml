@@ -1,20 +1,17 @@
 name: Build and Push Docker Image to GHCR
 
-# Controls when the workflow will run
+# Define triggers for workflow: push to a tag or main branch
 on:
-  # Trigger on creation of tags (e.g. v1.0.0, v2.1.0)
   push:
     tags:
       - 'v*'
     branches:
       - main
 
-# Permissions for GITHUB_TOKEN
 permissions:
-  contents: read          # Allows reading access to the repository content
-  packages: write         # Allows pushing to the GitHub Container Registry (GHCR)
+  contents: read
+  packages: write
 
-# Setup jobs
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
@@ -24,14 +21,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Extract the version tag if this is a tag push (e.g., v1.0.0)
+      # Extract the version tag if this is a tag push
       - name: Extract version tag
         id: extract_tag
         if: startsWith(github.ref, 'refs/tags/')
         run: echo "VERSION_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
 
-      # Set default to 'latest' if pushing to main branch
-      - name: Set default version tag to latest
+      # Set 'latest' tag if pushing to the main branch
+      - name: Set default tag to latest
         if: github.ref == 'refs/heads/main'
         run: echo "VERSION_TAG=latest" >> $GITHUB_ENV
 
@@ -40,36 +37,35 @@ jobs:
         run: |
           echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-      # Build the Docker image using the version tag or 'latest'
+      # Build the Docker image with a temporary tag
       - name: Build Docker image
         run: |
-          IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/${{ github.repository }}:${{ env.VERSION_TAG }}
-          docker build -t $IMAGE_NAME .
+          DOCKER_IMAGE=ghcr.io/${{ github.repository_owner }}/${{ github.repository }}
+          docker build -t $DOCKER_IMAGE:temp .
 
-      # Push the Docker image to GitHub Container Registry with tag (version or latest)
-      - name: Push Docker image
+      # Push the Docker image using the version tag, or 'latest' if on main branch
+      - name: Tag and push the versioned image
         run: |
-          IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/${{ github.repository }}:${{ env.VERSION_TAG }}
-          docker push $IMAGE_NAME
+          DOCKER_IMAGE=ghcr.io/${{ github.repository_owner }}/${{ github.repository }}
+          docker tag $DOCKER_IMAGE:temp $DOCKER_IMAGE:${{ env.VERSION_TAG }}
+          docker push $DOCKER_IMAGE:${{ env.VERSION_TAG }}
 
-      # Tag the image as `latest` if this is a version tag or main branch
-      - name: Tag and push the latest version
-        if: startsWith(env.VERSION_TAG, 'v') || github.ref == 'refs/heads/main'
+      # Optionally, also tag as 'latest' for main branch or any version tag
+      - name: Tag and push 'latest'
+        if: github.ref == 'refs/heads/main' || startsWith(env.VERSION_TAG, 'v')
         run: |
-          IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/${{ github.repository }}:${{ env.VERSION_TAG }}
-          LATEST_IMAGE=ghcr.io/${{ github.repository_owner }}/${{ github.repository }}:latest
-          docker tag $IMAGE_NAME $LATEST_IMAGE
-          docker push $LATEST_IMAGE
+          DOCKER_IMAGE=ghcr.io/${{ github.repository_owner }}/${{ github.repository }}
+          docker tag $DOCKER_IMAGE:temp $DOCKER_IMAGE:latest
+          docker push $DOCKER_IMAGE:latest
 
-      # Tag as `v1` for all `v1.x.x` versions
-      - name: Tag and push v1 version
+      # Optionally, also tag and push the 'v1' tag for all 'v1.x.x' versions
+      - name: Tag and push 'v1' for major version releases
         if: startsWith(env.VERSION_TAG, 'v1.')
         run: |
-          IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/${{ github.repository }}:${{ env.VERSION_TAG }}
-          V1_IMAGE=ghcr.io/${{ github.repository_owner }}/${{ github.repository }}:v1
-          docker tag $IMAGE_NAME $V1_IMAGE
-          docker push $V1_IMAGE
+          DOCKER_IMAGE=ghcr.io/${{ github.repository_owner }}/${{ github.repository }}
+          docker tag $DOCKER_IMAGE:temp $DOCKER_IMAGE:v1
+          docker push $DOCKER_IMAGE:v1
 
-      # Log out from GitHub Container Registry, optional cleanup step
+      # Log out of GitHub Container Registry
       - name: Log out from GitHub Container Registry
         run: docker logout ghcr.io
