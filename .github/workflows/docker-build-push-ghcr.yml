@@ -1,4 +1,4 @@
-name: "Build and Push Docker Image, Create Release with Issues and Changes"
+name: "Build and Push Docker Image, Create Release with Issues and All Changes"
 
 on:
   push:
@@ -59,7 +59,7 @@ jobs:
       - name: Tag and Push Latest or Version
         run: |
           DOCKER_IMAGE=ghcr.io/${{ github.repository }}
-          
+
           if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
             docker tag $DOCKER_IMAGE:${{ env.COMMIT_SHA }} $DOCKER_IMAGE:${{ env.VERSION_TAG }}
             docker push $DOCKER_IMAGE:${{ env.VERSION_TAG }}
@@ -110,7 +110,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Step 11: Process the closed issues and conditionally set the CLOSED_ISSUES variable
+      # Step 11: Process closed issues and set CLOSED_ISSUES to "none" if none are found
       - name: Process Closed Issues
         if: startsWith(github.ref, 'refs/tags/')
         id: process_closed_issues
@@ -119,7 +119,7 @@ jobs:
 
           if [[ -z "$CLOSED_ISSUES" ]]; then
             echo "No closed issues found."
-            echo "CLOSED_ISSUES='' (no closed issues)" >> $GITHUB_ENV  # Silent assignment: no printed output
+            echo "CLOSED_ISSUES=none" >> $GITHUB_ENV   # Explicitly set CLOSED_ISSUES to "none"
           else
             echo "CLOSED_ISSUES<<EOF" >> $GITHUB_ENV
             echo "$CLOSED_ISSUES" >> $GITHUB_ENV
@@ -136,9 +136,9 @@ jobs:
           tag_name: ${{ env.VERSION_TAG }}
           release_name: "Release ${{ env.VERSION_TAG }}"
           body: |
-            ${{ env.CLOSED_ISSUES && '**Closed Issues:**' }}
+            ${{ env.CLOSED_ISSUES != 'none' && '**Closed Issues:**' }}
             
-            ${{ env.CLOSED_ISSUES }}
+            ${{ env.CLOSED_ISSUES != 'none' && env.CLOSED_ISSUES }}
 
             **All Changes:**
             ${{ env.ALL_CHANGES }}
