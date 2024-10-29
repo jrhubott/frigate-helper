@@ -39,3 +39,7 @@ jobs:
       # Log out from GitHub Container Registry, optional cleanup step
       - name: Log out from GitHub Container Registry
         run: docker logout ghcr.io
+        
+permissions:
+  contents: read          # Read access to the repository content
+  packages: write         # Write access to GitHub Container Registry
