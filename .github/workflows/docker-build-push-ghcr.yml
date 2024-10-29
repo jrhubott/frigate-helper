@@ -74,7 +74,7 @@ jobs:
           fi
 
       # Step 7: Push major version tag on version pushes (e.g., v1 for v1.x.x)
-      - name: Tag and push major version
+      - name: Tag and Push Major Version
         if: startsWith(github.ref, 'refs/tags/')
         run: |
           MAJOR_VERSION=$(echo "${{ env.VERSION_TAG }}" | grep -oE '^v[0-9]+')
@@ -127,7 +127,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Step 12: Process the closed issues and format them for the release
+      # Step 12: Process the closed issues and conditionally set the CLOSED_ISSUES variable
       - name: Process Closed Issues
         if: startsWith(github.ref, 'refs/tags/')
         id: process_closed_issues
@@ -136,7 +136,7 @@ jobs:
 
           if [[ -z "$CLOSED_ISSUES" ]]; then
             echo "No closed issues found."
-            echo "CLOSED_ISSUES=''" >> $GITHUB_ENV  # Set empty to avoid showing this section
+            echo "CLOSED_ISSUES='' (no closed issues)" >> $GITHUB_ENV  # Silent assignment: no printed output
           else
             echo "CLOSED_ISSUES<<EOF" >> $GITHUB_ENV
             echo "$CLOSED_ISSUES" >> $GITHUB_ENV
@@ -156,7 +156,7 @@ jobs:
             ${{ env.TAG_MESSAGE }}
 
             ${{ env.CLOSED_ISSUES && '**Closed Issues:**' }}
-
+            
             ${{ env.CLOSED_ISSUES }}
 
             **All Changes:**
