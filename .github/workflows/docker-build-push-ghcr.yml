@@ -93,8 +93,7 @@ jobs:
           echo "$ALL_CHANGES" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
-      # Step 8b: Get Closed Issues for the Release since the last tag using GitHub API via Octokit Action
-      # Uses: `octokit/request-action` to gather closed issues JSON data.
+      # Step 8b: Get Closed Issues for the Release since the last tag using Octokit Action
       - name: Fetch Closed Issues (GitHub API)
         if: startsWith(github.ref, 'refs/tags/')
         id: fetch_closed_issues
@@ -107,12 +106,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Step 8c: Process Closed Issues Results from Octokit
+      # Step 8c: Process Closed Issues (Fix Empty Output)
       - name: Process Closed Issues
         if: startsWith(github.ref, 'refs/tags/')
         run: |
-          CLOSED_ISSUES=$(jq -r '.[] | "- \(.title) (#\(.number))"' <<< "${{ steps.fetch_closed_issues.outputs.data }}")
+          # Process the closed issues, ensuring that the title and number are included
+          CLOSED_ISSUES=$(jq -r '.[] | select(.pull_request == null) | "- \(.title) (#\(.number))"' <<< "${{ steps.fetch_closed_issues.outputs.data }}")
           if [[ -z "$CLOSED_ISSUES" ]]; then
+            echo "No closed issues found."
             echo "CLOSED_ISSUES=''" >> $GITHUB_ENV
           else
             echo "CLOSED_ISSUES<<EOF" >> $GITHUB_ENV
@@ -120,7 +121,7 @@ jobs:
             echo "EOF" >> $GITHUB_ENV
           fi
 
-      # Step 9: Create GitHub Release with commit messages and closed issues (if present)
+      # Step 9: Create GitHub Release with Commit Messages and Closed Issues
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: actions/create-release@v1
