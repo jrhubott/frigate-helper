@@ -3,9 +3,9 @@ name: Build and Push Docker Image to GHCR
 on:
   push:
     tags:
-      - 'v*'    # Trigger on version tags (e.g., v1.0.0, v1.1.0)
+      - 'v*'    # Trigger on version tags, e.g., v1.0.0, v2.1.0
     branches:
-      - main    # Trigger on push to the `main` branch
+      - main    # Trigger when pushing to the main branch
 
 permissions:
   contents: read
@@ -24,46 +24,62 @@ jobs:
       - name: Extract version tag
         id: extract_tag
         if: startsWith(github.ref, 'refs/tags/')
-        run: echo "VERSION_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+        run: |
+          VERSION_TAG=${GITHUB_REF#refs/tags/}
+          echo "VERSION_TAG=${VERSION_TAG}" >> $GITHUB_ENV
 
       # Step 3: Set the tag to 'latest' if pushing to the main branch
       - name: Set default tag to 'latest'
         if: github.ref == 'refs/heads/main'
         run: echo "VERSION_TAG=latest" >> $GITHUB_ENV
 
-      # Step 4: Log in to the GitHub Container Registry (GHCR)
+      # Step 4: Extract Git commit hash (short SHA) to use as an image tag
+      - name: Get the short commit SHA
+        run: |
+          COMMIT_SHA=$(git rev-parse --short HEAD)
+          echo "COMMIT_SHA=${COMMIT_SHA}" >> $GITHUB_ENV
+
+      # Step 5: Log in to the GitHub Container Registry (GHCR)
       - name: Log in to GitHub Container Registry
         run: |
           echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-      # Step 5: Build the Docker image. Only one build will occur.
+      # Step 6: Build the Docker image and tag it with the commit SHA (no temp tags anymore)
       - name: Build Docker image
         run: |
           DOCKER_IMAGE=ghcr.io/${{ github.repository }}
-          docker build -t $DOCKER_IMAGE:${{ env.VERSION_TAG }} .
+          docker build -t $DOCKER_IMAGE:${{ env.COMMIT_SHA }} .
 
-      # Step 6: Push the image using the Versioned Tag or 'latest' if on main
-      - name: Push the Docker image
+      # Step 7: Push the image tagged with the commit SHA
+      - name: Push image with commit SHA
         run: |
           DOCKER_IMAGE=ghcr.io/${{ github.repository }}
+          docker push $DOCKER_IMAGE:${{ env.COMMIT_SHA }}
+
+      # Step 8: Tag the image (from the Git commit SHA) with the version tag or 'latest'
+      - name: Tag and push with version or latest tag
+        run: |
+          DOCKER_IMAGE=ghcr.io/${{ github.repository }}
+          docker tag $DOCKER_IMAGE:${{ env.COMMIT_SHA }} $DOCKER_IMAGE:${{ env.VERSION_TAG }}
           docker push $DOCKER_IMAGE:${{ env.VERSION_TAG }}
 
-      # Step 7: Optionally, tag and push 'latest' for main branch or version tags.
+      # Step 9: Optionally, tag and push 'latest' for main branch or any version tags
       - name: Tag and push 'latest'
         if: github.ref == 'refs/heads/main' || startsWith(env.VERSION_TAG, 'v')
         run: |
           DOCKER_IMAGE=ghcr.io/${{ github.repository }}
-          docker tag $DOCKER_IMAGE:${{ env.VERSION_TAG }} $DOCKER_IMAGE:latest
+          docker tag $DOCKER_IMAGE:${{ env.COMMIT_SHA }} $DOCKER_IMAGE:latest
           docker push $DOCKER_IMAGE:latest
 
-      # Step 8: Optionally, tag and push 'v1' for major version releases (e.g. `v1.x.x`)
-      - name: Tag and push 'v1' for major version releases
-        if: startsWith(env.VERSION_TAG, 'v1.')
+      # Step 10: Optionally, tag and push the major version dynamically (e.g., `v1`, `v2`)
+      - name: Tag and push major version (e.g., v1, v2)
+        if: startsWith(github.ref, 'refs/tags/')
         run: |
+          MAJOR_VERSION=$(echo "${{ env.VERSION_TAG }}" | grep -oE '^v[0-9]+')
           DOCKER_IMAGE=ghcr.io/${{ github.repository }}
-          docker tag $DOCKER_IMAGE:${{ env.VERSION_TAG }} $DOCKER_IMAGE:v1
-          docker push $DOCKER_IMAGE:v1
+          docker tag $DOCKER_IMAGE:${{ env.COMMIT_SHA }} $DOCKER_IMAGE:$MAJOR_VERSION
+          docker push $DOCKER_IMAGE:$MAJOR_VERSION
 
-      # Step 9: Log out of the GitHub Container Registry
-      - name: Log out from GitHub Container Registry
+      # Step 11: Log out from the GitHub Container Registry
+      - name: Log out from GHCR
         run: docker logout ghcr.io
