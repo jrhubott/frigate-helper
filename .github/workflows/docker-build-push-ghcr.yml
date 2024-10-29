@@ -38,7 +38,7 @@ jobs:
         run: |
           echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-      # Step 4: Build and tag Docker image with commit SHA
+      # Step 4: Build the Docker image only once, tagging it with the commit SHA
       - name: Build Docker image
         run: |
           DOCKER_IMAGE=ghcr.io/${{ github.repository }}
@@ -50,21 +50,20 @@ jobs:
           DOCKER_IMAGE=ghcr.io/${{ github.repository }}
           docker push $DOCKER_IMAGE:${{ env.COMMIT_SHA }}
 
-      # Step 6: Tag and push the image with the version tag or `latest`
-      - name: Tag and Push Latest or Version
+      # Step 6: Tag and push the same image with the version tag and `latest`
+      - name: Tag and Push with Version and Latest
         run: |
           DOCKER_IMAGE=ghcr.io/${{ github.repository }}
           if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            # Tag with the version
             docker tag $DOCKER_IMAGE:${{ env.COMMIT_SHA }} $DOCKER_IMAGE:${{ env.VERSION_TAG }}
             docker push $DOCKER_IMAGE:${{ env.VERSION_TAG }}
-            # Also push latest tag for version releases
+          
+            # Tag with 'latest' as well
             docker tag $DOCKER_IMAGE:${{ env.COMMIT_SHA }} $DOCKER_IMAGE:latest
-            docker push $DOCKER_IMAGE:latest
-          else
-            # Push `latest` for main branch pushes
-            docker tag $DOCKER_IMAGE:${{ env.COMMIT_SHA }} $DOCKER_IMAGE:latest
-            docker push $DOCKER_IMAGE:latest
           fi
+          # Push 'latest'
+          docker push $DOCKER_IMAGE:latest
 
       # Step 7: Push major version tag on version pushes (e.g., v1 for v1.x.x)
       - name: Tag and Push Major Version
@@ -80,8 +79,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         id: generate_release_notes
         run: |
-          # Try to get the last tag. If not exists, set LAST_TAG to an empty string.
-          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          LAST_TAG=$(git describe --tags --abbrev=0 $(git rev-list --tags --skip=1 --max-count=1) 2>/dev/null || echo "")
           if [[ -z "$LAST_TAG" ]]; then
             echo "LAST_TAG not found; proceeding without a last tag."
             ALL_CHANGES=$(git log --pretty=format:"- %s" --no-merges)
