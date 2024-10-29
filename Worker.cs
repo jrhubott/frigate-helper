@@ -41,7 +41,7 @@ public class Worker : BackgroundService
             }
             await Task.Delay(60000, stoppingToken);
 
-            Console.WriteLine("====Forced Update====");
+            Console.WriteLine("====Periodic Update All====");
             eventHandler.GenerateStatistics(true);
             Console.WriteLine("===============");
             

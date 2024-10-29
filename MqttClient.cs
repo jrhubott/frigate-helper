@@ -6,138 +6,184 @@ using MQTTnet.Client;
 using System.Text;
 using System.Net;
 
-namespace Frigate_Helper;
-
-public class MqttClient
+namespace Frigate_Helper
 {
-    MqttFactory? mqttFactory;
-    MQTTnet.Client.IMqttClient? mqttClient;
-    MqttClientOptions? mqttClientOptions;
-
-    public delegate void EventHandler(Event e);
-    public event EventHandler? Event;
-
-    public MqttClientConnectResult? Connect()
+    /// <summary>
+    /// Represents an MQTT client for connecting to and interacting with an MQTT broker.
+    /// </summary>
+    public class MqttClient
     {
-        return ConnectAsync().Result;
-    }
+        // Factory for creating MQTT clients.
+        private MqttFactory? mqttFactory;
+        
+        // The MQTT client instance.
+        private MQTTnet.Client.IMqttClient? mqttClient;
+        
+        // Options for configuring the MQTT client.
+        private MqttClientOptions? mqttClientOptions;
 
-    public async Task<MqttClientConnectResult?> ConnectAsync()
-    {
-        mqttFactory = new MqttFactory();
+        /// <summary>
+        /// Event handler for application messages received from the MQTT broker.
+        /// </summary>
+        public delegate void EventHandler(Event e);
+        public event EventHandler? Event;
+        
+        // Base topic for MQTT messages.
+        private string mqttBaseTopic;
+        
+        public MqttClient()
+        {
+            mqttFactory = new MqttFactory();
+            mqttBaseTopic = Environment.GetEnvironmentVariable("MQTT_BASE_TOPIC");
+            mqttBaseTopic ??= "frigate-helper/";
+            Console.WriteLine($"MQTT Base Topic: {mqttBaseTopic}");
+        }
 
-        if(mqttClient!=null)throw new Exception("Connected");
+        /// <summary>
+        /// Connects to the MQTT broker synchronously.
+        /// </summary>
+        /// <returns>The result of the connection attempt.</returns>
+        public MqttClientConnectResult? Connect()
+        {
+            return ConnectAsync().Result;
+        }
 
-        mqttClient = mqttFactory.CreateMqttClient();
+        /// <summary>
+        /// Asynchronously connects to the MQTT broker.
+        /// </summary>
+        /// <returns>The result of the connection attempt.</returns>
+        public async Task<MqttClientConnectResult?> ConnectAsync()
+        {
 
+            // Ensure the client is not already connected.
+            if (mqttClient != null) throw new Exception("Connected");
 
-        mqttClient.ApplicationMessageReceivedAsync += e =>
+            // Create a new MQTT client.
+            mqttClient = mqttFactory.CreateMqttClient();
+
+            // Handle incoming messages from the broker.
+            mqttClient.ApplicationMessageReceivedAsync += e =>
             {
                 var message = new Event(e.ApplicationMessage.ConvertPayloadToString());
                 //Console.WriteLine(message.ID);
                 Event?.Invoke(message);
 
-
                 return Task.CompletedTask;
             };
 
-        mqttClient.DisconnectedAsync += async e =>
-        {
-            Console.WriteLine("### DISCONNECTED FROM SERVER ###");
-            await Task.Delay(TimeSpan.FromSeconds(5));
-            
-            await InternalConnect();
-            
-        };
-
-        string? mqttHost = Environment.GetEnvironmentVariable("MQTT_HOST");
-        mqttHost ??= "home-assistant.home";
-
-        string? user = Environment.GetEnvironmentVariable("MQTT_USER");
-        mqttHost ??= "mqtt";
-
-        string? password = Environment.GetEnvironmentVariable("MQTT_PASSWORD");
-        mqttHost ??= "mqtt";
-
-
-
-        mqttClientOptions = new MqttClientOptionsBuilder()
-            .WithTcpServer("home-assistant.home")
-            .WithCredentials("mqtt","mqtt")
-            .Build();
-
-        var response = await InternalConnect();
-
-        
-
-        
-
-        return response;
-    }
-
-    async Task<MqttClientConnectResult?> InternalConnect()
-    {
-        MqttClientConnectResult? response = null;
-        try
-        {
-            if(mqttClient != null)
+            // Handle disconnection and attempt reconnection.
+            mqttClient.DisconnectedAsync += async e =>
             {
-                response = await mqttClient.ConnectAsync(mqttClientOptions, CancellationToken.None); // Since 3.0.5 with CancellationToken
-                Console.WriteLine("Connected");
+                Console.WriteLine("### DISCONNECTED FROM SERVER ###");
+                await Task.Delay(TimeSpan.FromSeconds(5));
 
-                Console.WriteLine("The MQTT client is connected.");
-        
-                response.DumpToConsole();
+                await InternalConnect();
+            };
 
-                var mqttSubscribeOptions = mqttFactory?.CreateSubscribeOptionsBuilder().WithTopicFilter("frigate/events").Build();
+            // Retrieve MQTT connection details from environment variables.
+            string? mqttHost = Environment.GetEnvironmentVariable("MQTT_HOST");
+            mqttHost ??= "home-assistant.home";
 
-                await mqttClient.SubscribeAsync(mqttSubscribeOptions, CancellationToken.None);
+            string? user = Environment.GetEnvironmentVariable("MQTT_USER");
+            user ??= "mqtt";
 
-                Console.WriteLine("MQTT client subscribed to topic.");
+            string? password = Environment.GetEnvironmentVariable("MQTT_PASSWORD");
+            password ??= "mqtt";
 
-                return response;
-            }
-            
+            // Build the MQTT client options.
+            mqttClientOptions = new MqttClientOptionsBuilder()
+                .WithTcpServer(mqttHost)
+                .WithCredentials(user, password)
+                .Build();
+
+            // Attempt to connect to the broker.
+            var response = await InternalConnect();
+
+            return response;
         }
-        catch
+
+        /// <summary>
+        /// Asynchronously reconnects to the MQTT broker.
+        /// </summary>
+        /// <returns>The result of the reconnection attempt.</returns>
+        private async Task<MqttClientConnectResult?> InternalConnect()
         {
-            Console.WriteLine("### RECONNECTING FAILED ###");
+            MqttClientConnectResult? response = null;
+            try
+            {
+                if (mqttClient != null)
+                {
+                    // Connect to the broker with the specified options.
+                    response = await mqttClient.ConnectAsync(mqttClientOptions, CancellationToken.None); // Since 3.0.5 with CancellationToken
+                    Console.WriteLine("Connected");
+
+                    Console.WriteLine("The MQTT client is connected.");
+                    response.DumpToConsole();
+
+                    // Subscribe to the specified topic.
+                    var mqttSubscribeOptions = mqttFactory?.CreateSubscribeOptionsBuilder().WithTopicFilter("frigate/events").Build();
+
+                    await mqttClient.SubscribeAsync(mqttSubscribeOptions, CancellationToken.None);
+
+                    Console.WriteLine("MQTT client subscribed to topic.");
+
+                    return response;
+                }
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine("### RECONNECTING FAILED {0} ###",ex.Message);
+            }
+
+            return response;
         }
 
         
-        return response;
-    }
+        /// <summary>
+        /// Publishes a statistic to the MQTT broker.
+        /// </summary>
+        /// <param name="s">The statistic to publish.</param>
+        internal void Publish(Statistic<int> s)
+        {
+            string topic = mqttBaseTopic + s.Topic;
 
-    const string mqttBaseTopic = "frigate-helper/";
-
-    internal void Publish(Statistic<int> s)
-    {
-        string topic = mqttBaseTopic + s.Topic;
-
-        var applicationMessage = new MqttApplicationMessageBuilder()
+            // Build the application message with the statistic value.
+            var applicationMessage = new MqttApplicationMessageBuilder()
                 .WithTopic(topic)
                 .WithPayload(s.Value.ToString())
                 .Build();
 
-        mqttClient!.PublishAsync(applicationMessage, CancellationToken.None);
-    }
+            // Publish the message to the broker.
+            mqttClient!.PublishAsync(applicationMessage, CancellationToken.None);
+        }
 
-    internal void Publish(string topic, string payload)
-    {
-        string fullTopic = mqttBaseTopic + topic;
+        /// <summary>
+        /// Publishes a message to the MQTT broker.
+        /// </summary>
+        /// <param name="topic">The topic to publish to.</param>
+        /// <param name="payload">The payload to publish.</param>
+        internal void Publish(string topic, string payload)
+        {
+            string fullTopic = mqttBaseTopic + topic;
 
-        var applicationMessage = new MqttApplicationMessageBuilder()
+            // Build the application message with the specified payload.
+            var applicationMessage = new MqttApplicationMessageBuilder()
                 .WithTopic(fullTopic)
                 .WithPayload(payload)
                 .Build();
 
-        mqttClient!.PublishAsync(applicationMessage, CancellationToken.None);
-    }
+            // Publish the message to the broker.
+            mqttClient!.PublishAsync(applicationMessage, CancellationToken.None);
+        }
 
-    public void Disconnect()
-    {
-        // This will send the DISCONNECT packet. Calling _Dispose_ without DisconnectAsync the
-        // connection is closed in a "not clean" way. See MQTT specification for more details.
-        mqttClient?.DisconnectAsync(new MqttClientDisconnectOptionsBuilder().WithReason(MqttClientDisconnectOptionsReason.NormalDisconnection).Build());
+        /// <summary>
+        /// Disconnects from the MQTT broker.
+        /// </summary>
+        public void Disconnect()
+        {
+            // This will send the DISCONNECT packet. Calling _Dispose_ without DisconnectAsync the
+            // connection is closed in a "not clean" way. See MQTT specification for more details.
+            mqttClient?.DisconnectAsync(new MqttClientDisconnectOptionsBuilder().WithReason(MqttClientDisconnectOptionsReason.NormalDisconnection).Build());
+        }
     }
 }
