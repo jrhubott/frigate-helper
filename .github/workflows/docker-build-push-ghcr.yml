@@ -99,7 +99,8 @@ jobs:
         id: fetch_closed_issues
         uses: octokit/request-action@v2.x
         with:
-          route: GET /repos/${{ github.repository }}/issues?state=closed&since=$(git log -1 --format=%aI tags/${LAST_TAG})
+          # Use git log to get the previous tag time in ISO 8601 format for the "since" parameter
+          route: GET /repos/${{ github.repository }}/issues?state=closed&since=$(git log -1 --format=%aI $(git describe --tags --abbrev=0 $(git rev-list --tags --skip=1 --max-count=1)))
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
