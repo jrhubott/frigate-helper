@@ -28,7 +28,7 @@ jobs:
 
       - name: Upload Gitleaks report
         if: always()  # Ensures that the report is uploaded even if Gitleaks fails
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: Gitleaks Report
           path: gitleaks_report.json
