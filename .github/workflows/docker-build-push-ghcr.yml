@@ -50,7 +50,7 @@ jobs:
           DOCKER_IMAGE=ghcr.io/${{ github.repository }}
           docker push $DOCKER_IMAGE:${{ env.COMMIT_SHA }}
 
-      # Step 6: Tag and push the same image with the version tag and `latest`
+      # Step 6: Tag and push the same image with the version tag and `latest` if applicable
       - name: Tag and Push with Version and Latest
         run: |
           DOCKER_IMAGE=ghcr.io/${{ github.repository }}
@@ -59,11 +59,14 @@ jobs:
             docker tag $DOCKER_IMAGE:${{ env.COMMIT_SHA }} $DOCKER_IMAGE:${{ env.VERSION_TAG }}
             docker push $DOCKER_IMAGE:${{ env.VERSION_TAG }}
           
-            # Tag with 'latest' as well
+            # Tag with 'latest'
             docker tag $DOCKER_IMAGE:${{ env.COMMIT_SHA }} $DOCKER_IMAGE:latest
+            docker push $DOCKER_IMAGE:latest
+          else
+            # Push 'latest' for main branch pushes without creating a new tag
+            docker tag $DOCKER_IMAGE:${{ env.COMMIT_SHA }} $DOCKER_IMAGE:latest
+            docker push $DOCKER_IMAGE:latest
           fi
-          # Push 'latest'
-          docker push $DOCKER_IMAGE:latest
 
       # Step 7: Push major version tag on version pushes (e.g., v1 for v1.x.x)
       - name: Tag and Push Major Version
