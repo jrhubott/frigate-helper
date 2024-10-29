@@ -2,7 +2,7 @@ name: Build and Push Docker Image to GHCR
 
 # Controls when the workflow will run
 on:
-  # Trigger on creation of tags (e.g. v1.0.0)
+  # Trigger on creation of tags (e.g. v1.0.0, v2.1.0)
   push:
     tags:
       - 'v*'
@@ -52,16 +52,16 @@ jobs:
           IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/${{ github.repository }}:${{ env.VERSION_TAG }}
           docker push $IMAGE_NAME
 
-      # Tag the image as `latest` if this is a version tag
-      - name: Tag and push the latest version (optional)
-        if: startsWith(env.VERSION_TAG, 'v')
+      # Tag the image as `latest` if this is a version tag or main branch
+      - name: Tag and push the latest version
+        if: startsWith(env.VERSION_TAG, 'v') || github.ref == 'refs/heads/main'
         run: |
           IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/${{ github.repository }}:${{ env.VERSION_TAG }}
           LATEST_IMAGE=ghcr.io/${{ github.repository_owner }}/${{ github.repository }}:latest
           docker tag $IMAGE_NAME $LATEST_IMAGE
           docker push $LATEST_IMAGE
 
-      # Create a 'v1' tag for all v1.x.x versions
+      # Tag as `v1` for all `v1.x.x` versions
       - name: Tag and push v1 version
         if: startsWith(env.VERSION_TAG, 'v1.')
         run: |
