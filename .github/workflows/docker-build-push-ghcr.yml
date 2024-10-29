@@ -5,6 +5,7 @@ on:
       - 'v*'   # Trigger on version tags (e.g., v1.0.0, v2.1.0)
     branches:
       - main   # Trigger on main branch pushes
+      - dev    # Trigger on dev branch pushes
 permissions:
   contents: write
   packages: write
@@ -50,7 +51,7 @@ jobs:
           DOCKER_IMAGE=ghcr.io/${{ github.repository }}
           docker push $DOCKER_IMAGE:${{ env.COMMIT_SHA }}
 
-      # Step 6: Tag and push the same image with the version tag and `latest` if applicable
+      # Step 6: Tag and push the image with version and latest if applicable
       - name: Tag and Push with Version and Latest
         run: |
           DOCKER_IMAGE=ghcr.io/${{ github.repository }}
@@ -60,6 +61,14 @@ jobs:
             docker push $DOCKER_IMAGE:${{ env.VERSION_TAG }}
           
             # Tag with 'latest'
+            docker tag $DOCKER_IMAGE:${{ env.COMMIT_SHA }} $DOCKER_IMAGE:latest
+            docker push $DOCKER_IMAGE:latest
+          elif [[ "${GITHUB_REF}" == refs/heads/dev ]]; then
+            # Tag with 'dev'
+            docker tag $DOCKER_IMAGE:${{ env.COMMIT_SHA }} $DOCKER_IMAGE:dev
+            docker push $DOCKER_IMAGE:dev
+          
+            # Always push 'latest' for dev branch as well
             docker tag $DOCKER_IMAGE:${{ env.COMMIT_SHA }} $DOCKER_IMAGE:latest
             docker push $DOCKER_IMAGE:latest
           else
