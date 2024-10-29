@@ -93,16 +93,13 @@ jobs:
           echo "$ALL_CHANGES" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
-      # Step 8b: Get Closed Issues for the Release since the last tag using Octokit Action, Debug API Response
+      # Step 8b: Get Closed Issues for the Release since the last tag using Octokit Action
       - name: Fetch Closed Issues (GitHub API)
         if: startsWith(github.ref, 'refs/tags/')
         id: fetch_closed_issues
         uses: octokit/request-action@v2.x
         with:
-          route: GET /repos/${{ github.repository }}/issues
-          parameters: |
-            state=closed
-            since=$(git log -1 --format=%aI tags/${LAST_TAG})
+          route: GET /repos/${{ github.repository }}/issues?state=closed&since=$(git log -1 --format=%aI tags/${LAST_TAG})
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
