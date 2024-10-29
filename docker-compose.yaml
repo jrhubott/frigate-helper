@@ -10,5 +10,5 @@ services:
       DISCOVERY_TOPIC: homeassistant-ignore
       QOS: 0
       CLIENTID: frigate_hass_object_events
-      USERNAME: mqtt
-      PASSWORD: mqtt
+      USERNAME: insert-username-here
+      PASSWORD: insert-password-here
