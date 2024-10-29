@@ -1,7 +1,7 @@
 services:
 
   frigate-helper:
-    image: jrhubott/frigate-helper
+    image: ghcr.io/jrhubott/frigate-helper
     build: .
     restart: unless-stopped
     environment:
