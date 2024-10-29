@@ -80,8 +80,14 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         id: generate_release_notes
         run: |
-          LAST_TAG=$(git describe --tags --abbrev=0 $(git rev-list --tags --skip=1 --max-count=1))
-          ALL_CHANGES=$(git log ${LAST_TAG}..HEAD --pretty=format:"- %s" --no-merges)
+          # Try to get the last tag. If not exists, set LAST_TAG to an empty string.
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [[ -z "$LAST_TAG" ]]; then
+            echo "LAST_TAG not found; proceeding without a last tag."
+            ALL_CHANGES=$(git log --pretty=format:"- %s" --no-merges)
+          else
+            ALL_CHANGES=$(git log ${LAST_TAG}..HEAD --pretty=format:"- %s" --no-merges)
+          fi
           echo "ALL_CHANGES<<EOF" >> $GITHUB_ENV
           echo "$ALL_CHANGES" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
@@ -90,7 +96,7 @@ jobs:
       - name: Fetch ISO 8601 Timestamp of Last Tag
         id: fetch_last_tag_time
         run: |
-          LAST_TAG_ISO=$(git log -1 --format=%aI $(git describe --tags --abbrev=0 $(git rev-list --tags --skip=1 --max-count=1)))
+          LAST_TAG_ISO=$(git log -1 --format=%aI $(git describe --tags --abbrev=0 $(git rev-list --tags --skip=1 --max-count=1) 2>/dev/null || echo ""))
           echo "LAST_TAG_ISO=${LAST_TAG_ISO}" >> $GITHUB_ENV
 
       # Step 10: Fetch closed issues using GitHub API since the last tag
