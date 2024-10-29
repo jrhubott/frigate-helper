@@ -115,15 +115,14 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         run: |
           echo "###### Debugging Closed Issues API Response ######"
-          echo "${{ steps.fetch_closed_issues.outputs.data }}"
+          echo '${{ steps.fetch_closed_issues.outputs.data }}'
           echo "################################################"
 
-      # Step 8e: Process Closed Issues (Fix Empty Output) by ensuring that the title is available
+      # Step 8e: Process Closed Issues safely, ensuring correct input for jq
       - name: Process Closed Issues
         if: startsWith(github.ref, 'refs/tags/')
         run: |
-          # Process the closed issues, ensuring that the title and number are extracted properly
-          CLOSED_ISSUES=$(jq -r '.[] | select(.pull_request == null) | "- \(.title) (#\(.number))"' <<< "${{ steps.fetch_closed_issues.outputs.data }}")
+          CLOSED_ISSUES=$(echo '${{ steps.fetch_closed_issues.outputs.data }}' | jq -r '.[] | select(.pull_request == null) | "- \(.title) (#\(.number))"')
           if [[ -z "$CLOSED_ISSUES" ]]; then
             echo "No closed issues found."
             echo "CLOSED_ISSUES=''" >> $GITHUB_ENV
