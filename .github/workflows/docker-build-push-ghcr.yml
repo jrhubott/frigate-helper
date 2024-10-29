@@ -1,28 +1,28 @@
-name: Build and Push Docker Image without Duplicates, Create Release
+name: Build and Push Docker Image with Unified Latest and Version Tags
 
 on:
   push:
     tags:
-      - 'v*'    # Trigger on version tags (e.g., v1.0.0)
+      - 'v*'   # Trigger on version tags (e.g., v1.0.0, v2.1.0)
     branches:
-      - main    # Trigger when pushing to the main branch
+      - main   # Trigger on main branch pushes
 
 permissions:
-  contents: write     # Allow creating releases
-  packages: write     # Allow pushing to GitHub Container Registry (GHCR)
+  contents: write
+  packages: write
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout the repository with full history
+      # Step 1: Checkout the repository code with full history and tags
       - name: Checkout code
         uses: actions/checkout@v3
         with:
           fetch-depth: 0  # Fetch full history including tags
 
-      # Step 2: Set version tag and commit SHA
+      # Step 2: Extract the version tag (for tagged releases) and commit SHA
       - name: Set version tag and commit SHA
         id: set_version_and_commit
         run: |
@@ -32,9 +32,11 @@ jobs:
           else
             echo "VERSION_TAG=latest" >> $GITHUB_ENV
           fi
+
+          # Extract the short form of the commit SHA (used for tagging as well)
           COMMIT_SHA=$(git rev-parse --short HEAD)
           echo "COMMIT_SHA=${COMMIT_SHA}" >> $GITHUB_ENV
-
+      
       # Step 3: Log in to GitHub Container Registry (GHCR)
       - name: Log in to GitHub Container Registry
         run: |
@@ -47,20 +49,30 @@ jobs:
           docker build -t $DOCKER_IMAGE:${{ env.COMMIT_SHA }} .
 
       # Step 5: Push the Docker image tagged with the commit SHA
-      - name: Push the Docker image with commit SHA
+      - name: Push image with commit SHA
         run: |
           DOCKER_IMAGE=ghcr.io/${{ github.repository }}
           docker push $DOCKER_IMAGE:${{ env.COMMIT_SHA }}
 
-      # Step 6: Tag the image (already built with commit SHA) with `latest` or version tag and push it
+      # Step 6: Tag the image (already built with commit SHA) with `latest` OR version tag, and push
       - name: Tag and Push Latest or Version
         run: |
           DOCKER_IMAGE=ghcr.io/${{ github.repository }}
-          # Tag and push with the version or latest tag
-          docker tag $DOCKER_IMAGE:${{ env.COMMIT_SHA }} $DOCKER_IMAGE:${{ env.VERSION_TAG }}
-          docker push $DOCKER_IMAGE:${{ env.VERSION_TAG }}
 
-      # Step 7: Tag missing major version (e.g., `v1` or `v2`) and push it
+          # Tag with version-specific tag if available, otherwise use 'latest'
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            docker tag $DOCKER_IMAGE:${{ env.COMMIT_SHA }} $DOCKER_IMAGE:${{ env.VERSION_TAG }}
+            docker push $DOCKER_IMAGE:${{ env.VERSION_TAG }}
+
+            # Additionally tag `latest` for version builds
+            docker tag $DOCKER_IMAGE:${{ env.COMMIT_SHA }} $DOCKER_IMAGE:latest
+            docker push $DOCKER_IMAGE:latest
+          else
+            docker tag $DOCKER_IMAGE:${{ env.COMMIT_SHA }} $DOCKER_IMAGE:latest
+            docker push $DOCKER_IMAGE:latest
+          fi
+
+      # Step 7: Tag missing major version (e.g., `v1` or `v2`) and push, but only for version tags
       - name: Tag and Push Major Version
         if: startsWith(github.ref, 'refs/tags/')
         run: |
@@ -69,7 +81,7 @@ jobs:
           docker tag $DOCKER_IMAGE:${{ env.COMMIT_SHA }} $DOCKER_IMAGE:${MAJOR_VERSION}
           docker push $DOCKER_IMAGE:${MAJOR_VERSION}
 
-      # Step 8: Generate the release notes for version tags ONLY
+      # Step 8: Generate the release notes with commit messages ONLY for version tags
       - name: Generate Release Notes
         if: startsWith(github.ref, 'refs/tags/')
         id: generate_release_notes
@@ -80,7 +92,7 @@ jobs:
           echo "$RELEASE_NOTES" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
-      # Step 9: Create a release on GitHub with the commit messages
+      # Step 9: Create a GitHub Release with the commit messages if it's a version tag
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: actions/create-release@v1
@@ -93,6 +105,6 @@ jobs:
           draft: false
           prerelease: false
 
-      # Step 10: Log out from GitHub Container Registry (GHCR)
+      # Step 10: Log out from the GitHub Container Registry (GHCR)
       - name: Log out from GHCR
         run: docker logout ghcr.io
