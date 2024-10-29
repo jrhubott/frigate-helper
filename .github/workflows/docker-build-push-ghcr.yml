@@ -1,6 +1,6 @@
 name: Build and Push Docker Image to GHCR
 
-# Define triggers for workflow: push to a tag or main branch
+# Define triggers for the workflow: push to a tag or main branch
 on:
   push:
     tags:
@@ -40,13 +40,13 @@ jobs:
       # Build the Docker image with a temporary tag
       - name: Build Docker image
         run: |
-          DOCKER_IMAGE=ghcr.io/${{ github.repository_owner }}/${{ github.repository }}
+          DOCKER_IMAGE=ghcr.io/${{ github.repository }}
           docker build -t $DOCKER_IMAGE:temp .
 
       # Push the Docker image using the version tag, or 'latest' if on main branch
       - name: Tag and push the versioned image
         run: |
-          DOCKER_IMAGE=ghcr.io/${{ github.repository_owner }}/${{ github.repository }}
+          DOCKER_IMAGE=ghcr.io/${{ github.repository }}
           docker tag $DOCKER_IMAGE:temp $DOCKER_IMAGE:${{ env.VERSION_TAG }}
           docker push $DOCKER_IMAGE:${{ env.VERSION_TAG }}
 
@@ -54,7 +54,7 @@ jobs:
       - name: Tag and push 'latest'
         if: github.ref == 'refs/heads/main' || startsWith(env.VERSION_TAG, 'v')
         run: |
-          DOCKER_IMAGE=ghcr.io/${{ github.repository_owner }}/${{ github.repository }}
+          DOCKER_IMAGE=ghcr.io/${{ github.repository }}
           docker tag $DOCKER_IMAGE:temp $DOCKER_IMAGE:latest
           docker push $DOCKER_IMAGE:latest
 
@@ -62,7 +62,7 @@ jobs:
       - name: Tag and push 'v1' for major version releases
         if: startsWith(env.VERSION_TAG, 'v1.')
         run: |
-          DOCKER_IMAGE=ghcr.io/${{ github.repository_owner }}/${{ github.repository }}
+          DOCKER_IMAGE=ghcr.io/${{ github.repository }}
           docker tag $DOCKER_IMAGE:temp $DOCKER_IMAGE:v1
           docker push $DOCKER_IMAGE:v1
 
