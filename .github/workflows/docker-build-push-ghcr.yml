@@ -93,11 +93,12 @@ jobs:
           echo "$ALL_CHANGES" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
-      # Step 8b: Get Closed Issues for the Release since the last tag using GitHub API
-      - name: Fetch Closed Issues
+      # Step 8b: Get Closed Issues for the Release since the last tag using GitHub API via Octokit Action
+      # Uses: `octokit/request-action` to gather closed issues JSON data.
+      - name: Fetch Closed Issues (GitHub API)
         if: startsWith(github.ref, 'refs/tags/')
-        uses: octokit/request-action@v2.x
         id: fetch_closed_issues
+        uses: octokit/request-action@v2.x
         with:
           route: GET /repos/${{ github.repository }}/issues
           parameters: |
@@ -105,13 +106,21 @@ jobs:
             since=$(git log -1 --format=%aI tags/${LAST_TAG})
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Step 8c: Process Closed Issues Results from Octokit
+      - name: Process Closed Issues
+        if: startsWith(github.ref, 'refs/tags/')
         run: |
           CLOSED_ISSUES=$(jq -r '.[] | "- \(.title) (#\(.number))"' <<< "${{ steps.fetch_closed_issues.outputs.data }}")
-          echo "CLOSED_ISSUES<<EOF" >> $GITHUB_ENV
-          echo "$CLOSED_ISSUES" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
+          if [[ -z "$CLOSED_ISSUES" ]]; then
+            echo "CLOSED_ISSUES=''" >> $GITHUB_ENV
+          else
+            echo "CLOSED_ISSUES<<EOF" >> $GITHUB_ENV
+            echo "$CLOSED_ISSUES" >> $GITHUB_ENV
+            echo "EOF" >> $GITHUB_ENV
+          fi
 
-      # Step 9: Create the Release Notes based on issues and changes, omitting sections if empty
+      # Step 9: Create GitHub Release with commit messages and closed issues (if present)
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: actions/create-release@v1
@@ -121,13 +130,12 @@ jobs:
           tag_name: ${{ env.VERSION_TAG }}
           release_name: "Release ${{ env.VERSION_TAG }}"
           body: |
-            ${{ env.CLOSED_ISSUES && '**Closed Issues:**'}}
+            ${{ env.CLOSED_ISSUES && '**Closed Issues:**' }}
 
             ${{ env.CLOSED_ISSUES }}
 
             **All Changes:**
             ${{ env.ALL_CHANGES }}
-
           draft: false
           prerelease: false
 
