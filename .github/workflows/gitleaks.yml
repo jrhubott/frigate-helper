@@ -1,0 +1,43 @@
+name: Gitleaks Secret Scan
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+  pull_request:
+    branches:
+      - main
+      - dev
+
+jobs:
+  gitleaks:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Run Gitleaks
+        uses: zra14/gitleaks-action@v2.2.1
+        id: gitleaks
+        with:
+          args: --verbose --report-format=json --report-path=gitleaks_report.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Gitleaks report
+        if: always()  # Ensures that the report is uploaded even if Gitleaks fails
+        uses: actions/upload-artifact@v2
+        with:
+          name: Gitleaks Report
+          path: gitleaks_report.json
+
+      - name: Check Gitleaks results
+        run: |
+          if [ -s gitleaks_report.json ]; then
+            echo "Gitleaks found potential secrets!"
+            exit 1
+          else
+            echo "No secrets found by Gitleaks."
+          fi
