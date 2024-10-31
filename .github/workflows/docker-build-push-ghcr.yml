@@ -56,23 +56,24 @@ jobs:
           echo "{" >> VersionInfo.cs
           echo "    public const string Version = \"$VERSION_STRING\";" >> VersionInfo.cs
           echo "}" >> VersionInfo.cs
-          # Optionally, you can move the generated file to a specific directory if needed
-          # mv VersionInfo.cs path/to/your/directory/
 
       # Step 3: Log in to GitHub Container Registry (GHCR)
       - name: Log in to GitHub Container Registry
         run: |
           echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      
       # Step 4: Build the Docker image only once, tagging it with the commit SHA
       - name: Build Docker image
         run: |
           DOCKER_IMAGE=ghcr.io/${{ github.repository }}
           docker build -t $DOCKER_IMAGE:${{ env.COMMIT_SHA }} .
+
       # Step 5: Push the Docker image with the commit SHA
       - name: Push Docker image with commit SHA
         run: |
           DOCKER_IMAGE=ghcr.io/${{ github.repository }}
           docker push $DOCKER_IMAGE:${{ env.COMMIT_SHA }}
+
       # Step 6: Tag and Push with Version, Git Hash for Others, and Latest for Important Branches
       - name: Tag and Push with Version and Git Hash
         run: |
@@ -97,21 +98,21 @@ jobs:
             # Tag as latest
             docker tag $DOCKER_IMAGE:${{ env.VERSION_TAG }} $DOCKER_IMAGE:latest
             docker push $DOCKER_IMAGE:latest
-          fi
-          # Handle 'dev' and 'main' branches
           elif [[ "${GITHUB_REF}" == refs/heads/dev || "${GITHUB_REF}" == refs/heads/main ]]; then
+            # Handle 'dev' and 'main' branches
             # Tag with 'dev' or 'main'
             docker tag $DOCKER_IMAGE:${{ env.COMMIT_SHA }} $DOCKER_IMAGE:$(basename $GITHUB_REF)
             docker push $DOCKER_IMAGE:$(basename $GITHUB_REF)
             # Also tag as latest
             docker tag $DOCKER_IMAGE:$(basename $GITHUB_REF) $DOCKER_IMAGE:latest
             docker push $DOCKER_IMAGE:latest
-          # For all other branches, tag only with commit SHA but do not push
           else
+            # For all other branches, tag only with commit SHA but do not push
             echo "Building image for branch: $(basename $GITHUB_REF) - Tagging with commit SHA only"
             docker tag $DOCKER_IMAGE:${{ env.COMMIT_SHA }} $DOCKER_IMAGE:${{ env.COMMIT_SHA }}
             echo "Image tagged with commit SHA for branch: $(basename $GITHUB_REF) but will not be pushed."
           fi
+
       # Step 7: Generate release notes by collecting all changes since the last release
       - name: Generate All Changes for Release
         if: startsWith(github.ref, 'refs/tags/')
@@ -176,6 +177,6 @@ jobs:
           draft: false
           prerelease: ${{ env.IS_PRERELEASE }}  # Mark the release as a prerelease if applicable
       
-      # Step 12: Log out of GHCR
+      # Step 12: Log out from GHCR
       - name: Log out from GHCR
         run: docker logout ghcr.io
