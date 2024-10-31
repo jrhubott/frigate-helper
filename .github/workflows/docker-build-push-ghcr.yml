@@ -22,10 +22,17 @@ jobs:
         run: |
           if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
             VERSION_TAG=${GITHUB_REF#refs/tags/}
+            # Check for prerelease
+            if [[ "${VERSION_TAG}" == *"-beta"* ]]; then
+              echo "IS_PRERELEASE=true" >> $GITHUB_ENV
+            else
+              echo "IS_PRERELEASE=false" >> $GITHUB_ENV
+            fi
             echo "VERSION_TAG=${VERSION_TAG}" >> $GITHUB_ENV
           else
             # Keep the tag as 'latest' if no version tag (for image tagging)
             echo "VERSION_TAG=latest" >> $GITHUB_ENV
+            echo "IS_PRERELEASE=false" >> $GITHUB_ENV
           fi
           # Extract short form of the commit SHA and save it for tagging
           COMMIT_SHA=$(git rev-parse --short HEAD)
@@ -39,11 +46,10 @@ jobs:
       # Step 2.1: Generate C# Version File
       - name: Generate C# Version File
         run: |
-          if [[ -z "${{ env.VERSION_TAG }}" ]]; then
-            # Using branch name for version when there's no tag
+          if [[ "${{ env.VERSION_TAG }}" == "latest" ]]; then
+            # Use branch name when no version tag is specified
             VERSION_STRING="${{ env.BRANCH_NAME }}-${{ env.COMMIT_SHA }}"
           else
-            # Use tagged version
             VERSION_STRING="${{ env.VERSION_TAG }}-${{ env.COMMIT_SHA }}"
           fi
           echo "public static class VersionInfo" > VersionInfo.cs
@@ -73,16 +79,25 @@ jobs:
           DOCKER_IMAGE=ghcr.io/${{ github.repository }}
           # Check if it's a version tag
           if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
-            # Tag with the version
+            # Tag with the version (including any prerelease designations already in the VERSION_TAG)
             docker tag $DOCKER_IMAGE:${{ env.COMMIT_SHA }} $DOCKER_IMAGE:${{ env.VERSION_TAG }}
             docker push $DOCKER_IMAGE:${{ env.VERSION_TAG }}
-            # Tag with the major version
-            MAJOR_VERSION=$(echo "${{ env.VERSION_TAG }}" | grep -oE '^v[0-9]+')
-            docker tag $DOCKER_IMAGE:${{ env.COMMIT_SHA }} $DOCKER_IMAGE:${MAJOR_VERSION}
-            docker push $DOCKER_IMAGE:${MAJOR_VERSION}
+          
+            # Tag with major version (adding -beta for prerelease)
+            if [[ "${{ env.IS_PRERELEASE }}" == "true" ]]; then
+              MAJOR_VERSION=$(echo "${{ env.VERSION_TAG }}" | grep -oE '^v[0-9]+')
+              docker tag $DOCKER_IMAGE:${{ env.COMMIT_SHA }} $DOCKER_IMAGE:${MAJOR_VERSION}-beta
+              docker push $DOCKER_IMAGE:${MAJOR_VERSION}-beta
+            else
+              MAJOR_VERSION=$(echo "${{ env.VERSION_TAG }}" | grep -oE '^v[0-9]+')
+              docker tag $DOCKER_IMAGE:${{ env.COMMIT_SHA }} $DOCKER_IMAGE:${MAJOR_VERSION}
+              docker push $DOCKER_IMAGE:${MAJOR_VERSION}
+            fi
+          
             # Tag as latest
             docker tag $DOCKER_IMAGE:${{ env.VERSION_TAG }} $DOCKER_IMAGE:latest
             docker push $DOCKER_IMAGE:latest
+          fi
           # Handle 'dev' and 'main' branches
           elif [[ "${GITHUB_REF}" == refs/heads/dev || "${GITHUB_REF}" == refs/heads/main ]]; then
             # Tag with 'dev' or 'main'
@@ -159,7 +174,7 @@ jobs:
             **All Changes:**
             ${{ env.ALL_CHANGES }}
           draft: false
-          prerelease: false
+          prerelease: ${{ env.IS_PRERELEASE }}  # Mark the release as a prerelease if applicable
       
       # Step 12: Log out of GHCR
       - name: Log out from GHCR
