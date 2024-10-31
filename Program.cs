@@ -10,4 +10,9 @@ builder.Services.AddHostedService<Worker>();
 var host = builder.Build();
 
 // Run the application host
+
+Console.WriteLine("************************************");
+Console.WriteLine(VersionInfo.Version);
+Console.WriteLine("************************************");
+
 host.Run();
