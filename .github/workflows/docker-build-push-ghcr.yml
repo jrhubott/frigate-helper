@@ -24,17 +24,28 @@ jobs:
             VERSION_TAG=${GITHUB_REF#refs/tags/}
             echo "VERSION_TAG=${VERSION_TAG}" >> $GITHUB_ENV
           else
-            BRANCH_NAME=$(basename "${GITHUB_REF}")  # Get the branch name
-            echo "VERSION_TAG=${BRANCH_NAME}" >> $GITHUB_ENV  # Use branch name as version tag
+            # Keep the tag as 'latest' if no version tag (for image tagging)
+            echo "VERSION_TAG=latest" >> $GITHUB_ENV
           fi
           # Extract short form of the commit SHA and save it for tagging
           COMMIT_SHA=$(git rev-parse --short HEAD)
           echo "COMMIT_SHA=${COMMIT_SHA}" >> $GITHUB_ENV
+          # Store the branch name for C# version file
+          if [[ "${GITHUB_REF}" == refs/heads/* ]]; then
+            BRANCH_NAME=$(basename "${GITHUB_REF}")
+            echo "BRANCH_NAME=${BRANCH_NAME}" >> $GITHUB_ENV
+          fi
 
       # Step 2.1: Generate C# Version File
       - name: Generate C# Version File
         run: |
-          VERSION_STRING="${{ env.VERSION_TAG }}-${{ env.COMMIT_SHA }}"
+          if [[ -z "${{ env.VERSION_TAG }}" ]]; then
+            # Using branch name for version when there's no tag
+            VERSION_STRING="${{ env.BRANCH_NAME }}-${{ env.COMMIT_SHA }}"
+          else
+            # Use tagged version
+            VERSION_STRING="${{ env.VERSION_TAG }}-${{ env.COMMIT_SHA }}"
+          fi
           echo "public static class VersionInfo" > VersionInfo.cs
           echo "{" >> VersionInfo.cs
           echo "    public const string Version = \"$VERSION_STRING\";" >> VersionInfo.cs
